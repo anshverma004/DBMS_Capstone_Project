@@ -1,0 +1,31 @@
+{
+  "name": "flash-movie-booking-backend",
+  "version": "1.0.0",
+  "description": "High-Concurrency Movie Flash-Sale & Seat Reservation Backend (Express + MySQL + Socket.io)",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon server.js"
+  },
+  "keywords": [
+    "mysql",
+    "express",
+    "socket.io",
+    "database",
+    "flash-sale",
+    "seat-reservation",
+    "concurrency",
+    "locking"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.9",
+    "express": "^5.3.0",
+    "mysql2": "^3.24.6",
+    "nodemon": "^3.1.14",
+    "socket.io": "^4.8.4"
+  }
+}

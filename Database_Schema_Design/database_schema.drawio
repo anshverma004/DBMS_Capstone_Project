@@ -1,0 +1,287 @@
+<mxfile host="app.diagrams.net" modified="2026-10-25T12:15:00.000Z" agent="Antigravity" version="24.7.0" type="device">
+  <diagram id="crows-foot-er-3nf" name="3NF ER Diagram (Crow's Foot)">
+    <mxGraphModel dx="1600" dy="950" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ==================== TITLE BANNER ==================== -->
+        <mxCell id="title_banner" value="High-Concurrency Movie Flash-Sale &amp; Seat Reservation System&#xa;Entity-Relationship (ER) Model — Crow&#39;s Foot Notation (3NF Normalized)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1e293b;strokeColor=#0f172a;fontColor=#ffffff;fontSize=15;fontStyle=1;align=center;verticalAlign=middle;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="380" y="20" width="880" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== TABLE 1: MOVIES ==================== -->
+        <mxCell id="tbl_movies" value="movies" style="swimlane;fontStyle=1;fontSize=13;childLayout=stackLayout;horizontal=1;startSize=32;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#2563eb;fontColor=#1e3a8a;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="70" y="110" width="290" height="144" as="geometry" />
+        </mxCell>
+        <mxCell id="movies_c1" value="PK   movie_id : INT AUTO_INCREMENT" style="text;strokeColor=#bfdbfe;fillColor=#eff6ff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=5;fontSize=11;whiteSpace=wrap;html=1;fontColor=#1e40af;" vertex="1" parent="tbl_movies">
+          <mxGeometry y="32" width="290" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="movies_c2" value="       title : VARCHAR(150) [NOT NULL]" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;whiteSpace=wrap;html=1;" vertex="1" parent="tbl_movies">
+          <mxGeometry y="60" width="290" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="movies_c3" value="       genre : VARCHAR(100) [NOT NULL]" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;whiteSpace=wrap;html=1;" vertex="1" parent="tbl_movies">
+          <mxGeometry y="88" width="290" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="movies_c4" value="       duration_mins : INT [CHECK &gt; 0]" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;whiteSpace=wrap;html=1;" vertex="1" parent="tbl_movies">
+          <mxGeometry y="116" width="290" height="28" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== TABLE 2: SCREENS ==================== -->
+        <mxCell id="tbl_screens" value="screens (Auditoriums)" style="swimlane;fontStyle=1;fontSize=13;childLayout=stackLayout;horizontal=1;startSize=32;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#2563eb;fontColor=#1e3a8a;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="70" y="340" width="290" height="172" as="geometry" />
+        </mxCell>
+        <mxCell id="screens_c1" value="PK   screen_id : INT AUTO_INCREMENT" style="text;strokeColor=#bfdbfe;fillColor=#eff6ff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=5;fontSize=11;whiteSpace=wrap;html=1;fontColor=#1e40af;" vertex="1" parent="tbl_screens">
+          <mxGeometry y="32" width="290" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="screens_c2" value="UK   screen_name : VARCHAR(100) [NOT NULL]" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;whiteSpace=wrap;html=1;" vertex="1" parent="tbl_screens">
+          <mxGeometry y="60" width="290" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="screens_c3" value="       total_rows : INT [CHECK &gt; 0]" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;whiteSpace=wrap;html=1;" vertex="1" parent="tbl_screens">
+          <mxGeometry y="88" width="290" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="screens_c4" value="       seats_per_row : INT [CHECK &gt; 0]" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;whiteSpace=wrap;html=1;" vertex="1" parent="tbl_screens">
+          <mxGeometry y="116" width="290" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="screens_c5" value="       total_capacity : INT [CHECK = rows*seats]" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;whiteSpace=wrap;html=1;" vertex="1" parent="tbl_screens">
+          <mxGeometry y="144" width="290" height="28" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== TABLE 3: USERS ==================== -->
+        <mxCell id="tbl_users" value="users" style="swimlane;fontStyle=1;fontSize=13;childLayout=stackLayout;horizontal=1;startSize=32;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dcfce7;strokeColor=#16a34a;fontColor=#14532d;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="70" y="650" width="290" height="144" as="geometry" />
+        </mxCell>
+        <mxCell id="users_c1" value="PK   user_id : INT AUTO_INCREMENT" style="text;strokeColor=#bbf7d0;fillColor=#f0fdf4;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=5;fontSize=11;whiteSpace=wrap;html=1;fontColor=#166534;" vertex="1" parent="tbl_users">
+          <mxGeometry y="32" width="290" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="users_c2" value="       full_name : VARCHAR(100) [NOT NULL]" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;whiteSpace=wrap;html=1;" vertex="1" parent="tbl_users">
+          <mxGeometry y="60" width="290" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="users_c3" value="UK   email : VARCHAR(150) [NOT NULL]" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;whiteSpace=wrap;html=1;" vertex="1" parent="tbl_users">
+          <mxGeometry y="88" width="290" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="users_c4" value="       created_at : TIMESTAMP" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;whiteSpace=wrap;html=1;" vertex="1" parent="tbl_users">
+          <mxGeometry y="116" width="290" height="28" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== TABLE 4: SHOWS ==================== -->
+        <mxCell id="tbl_shows" value="shows (Showtimes &amp; Flash-Sale Drops)" style="swimlane;fontStyle=1;fontSize=13;childLayout=stackLayout;horizontal=1;startSize=32;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#e0e7ff;strokeColor=#4f46e5;fontColor=#312e81;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="530" y="100" width="350" height="256" as="geometry" />
+        </mxCell>
+        <mxCell id="shows_c1" value="PK   show_id : INT AUTO_INCREMENT" style="text;strokeColor=#c7d2fe;fillColor=#eef2ff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=5;fontSize=11;whiteSpace=wrap;html=1;fontColor=#3730a3;" vertex="1" parent="tbl_shows">
+          <mxGeometry y="32" width="350" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="shows_c2" value="FK   movie_id : INT [NOT NULL]" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=1;fontSize=11;whiteSpace=wrap;html=1;fontColor=#4338ca;" vertex="1" parent="tbl_shows">
+          <mxGeometry y="60" width="350" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="shows_c3" value="FK   screen_id : INT [NOT NULL, UK1]" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=1;fontSize=11;whiteSpace=wrap;html=1;fontColor=#4338ca;" vertex="1" parent="tbl_shows">
+          <mxGeometry y="88" width="350" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="shows_c4" value="UK1 show_datetime : DATETIME [NOT NULL]" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;whiteSpace=wrap;html=1;" vertex="1" parent="tbl_shows">
+          <mxGeometry y="116" width="350" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="shows_c5" value="       is_flash_sale : BOOLEAN [DEFAULT FALSE]" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;whiteSpace=wrap;html=1;" vertex="1" parent="tbl_shows">
+          <mxGeometry y="144" width="350" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="shows_c6" value="       sale_start_time : DATETIME [NOT NULL]" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;whiteSpace=wrap;html=1;" vertex="1" parent="tbl_shows">
+          <mxGeometry y="172" width="350" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="shows_c7" value="       available_seats : INT [CHECK &gt;= 0]" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;whiteSpace=wrap;html=1;" vertex="1" parent="tbl_shows">
+          <mxGeometry y="200" width="350" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="shows_c8" value="       status : ENUM(&#39;UPCOMING&#39;,&#39;OPEN&#39;,&#39;SOLD_OUT&#39;)" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;whiteSpace=wrap;html=1;" vertex="1" parent="tbl_shows">
+          <mxGeometry y="228" width="350" height="28" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== TABLE 5: SHOW_SEATS (CORE CONCURRENCY) ==================== -->
+        <mxCell id="tbl_show_seats" value="show_seats (Core Concurrency &amp; Locking Table)" style="swimlane;fontStyle=1;fontSize=13;childLayout=stackLayout;horizontal=1;startSize=32;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#fef3c7;strokeColor=#d97706;fontColor=#78350f;rounded=1;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="530" y="430" width="350" height="368" as="geometry" />
+        </mxCell>
+        <mxCell id="ss_c1" value="PK   show_seat_id : INT AUTO_INCREMENT" style="text;strokeColor=#fde68a;fillColor=#fffbeb;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=5;fontSize=11;whiteSpace=wrap;html=1;fontColor=#92400e;" vertex="1" parent="tbl_show_seats">
+          <mxGeometry y="32" width="350" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="ss_c2" value="FK   show_id : INT [NOT NULL, UK1, IDX1]" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=1;fontSize=11;whiteSpace=wrap;html=1;fontColor=#b45309;" vertex="1" parent="tbl_show_seats">
+          <mxGeometry y="60" width="350" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="ss_c3" value="UK1 row_label : CHAR(1) [NOT NULL]" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;whiteSpace=wrap;html=1;" vertex="1" parent="tbl_show_seats">
+          <mxGeometry y="88" width="350" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="ss_c4" value="UK1 seat_number : INT [NOT NULL, CHECK &gt; 0]" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;whiteSpace=wrap;html=1;" vertex="1" parent="tbl_show_seats">
+          <mxGeometry y="116" width="350" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="ss_c5" value="       seat_code : VARCHAR(5) [NOT NULL, e.g. &#39;E5&#39;]" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;whiteSpace=wrap;html=1;" vertex="1" parent="tbl_show_seats">
+          <mxGeometry y="144" width="350" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="ss_c6" value="       tier : ENUM(&#39;CLASSIC&#39;,&#39;PRIME&#39;,&#39;RECLINER&#39;)" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;whiteSpace=wrap;html=1;" vertex="1" parent="tbl_show_seats">
+          <mxGeometry y="172" width="350" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="ss_c7" value="       price : DECIMAL(10,2) [CHECK &gt;= 0]" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;whiteSpace=wrap;html=1;" vertex="1" parent="tbl_show_seats">
+          <mxGeometry y="200" width="350" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="ss_c8" value="IDX1 status : ENUM(&#39;AVAILABLE&#39;,&#39;HELD&#39;,&#39;BOOKED&#39;)" style="text;strokeColor=none;fillColor=#fef9c3;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=1;fontSize=11;whiteSpace=wrap;html=1;" vertex="1" parent="tbl_show_seats">
+          <mxGeometry y="228" width="350" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="ss_c9" value="FK   held_by_user_id : INT [NULL]" style="text;strokeColor=none;fillColor=#fef9c3;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=1;fontSize=11;whiteSpace=wrap;html=1;fontColor=#b45309;" vertex="1" parent="tbl_show_seats">
+          <mxGeometry y="256" width="350" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="ss_c10" value="IDX1 held_until : DATETIME [NULL, 5-Min TTL]" style="text;strokeColor=none;fillColor=#fef9c3;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=1;fontSize=11;whiteSpace=wrap;html=1;" vertex="1" parent="tbl_show_seats">
+          <mxGeometry y="284" width="350" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="ss_c11" value="       version : INT [NOT NULL DEFAULT 1, OCC]" style="text;strokeColor=none;fillColor=#fef9c3;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=1;fontSize=11;whiteSpace=wrap;html=1;" vertex="1" parent="tbl_show_seats">
+          <mxGeometry y="312" width="350" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="ss_c12" value="       updated_at : TIMESTAMP" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;whiteSpace=wrap;html=1;" vertex="1" parent="tbl_show_seats">
+          <mxGeometry y="340" width="350" height="28" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== TABLE 6: SEAT_AUDIT_LOGS (TRIGGER) ==================== -->
+        <mxCell id="tbl_audit" value="seat_audit_logs (Trigger Audit Trail)" style="swimlane;fontStyle=1;fontSize=13;childLayout=stackLayout;horizontal=1;startSize=32;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#f3e8ff;strokeColor=#9333ea;fontColor=#581c87;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="100" width="350" height="256" as="geometry" />
+        </mxCell>
+        <mxCell id="aud_c1" value="PK   log_id : BIGINT AUTO_INCREMENT" style="text;strokeColor=#e9d5ff;fillColor=#faf5ff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=5;fontSize=11;whiteSpace=wrap;html=1;fontColor=#6b21a8;" vertex="1" parent="tbl_audit">
+          <mxGeometry y="32" width="350" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="aud_c2" value="FK   show_seat_id : INT [NOT NULL]" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=1;fontSize=11;whiteSpace=wrap;html=1;fontColor=#7e22ce;" vertex="1" parent="tbl_audit">
+          <mxGeometry y="60" width="350" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="aud_c3" value="       show_id : INT [NOT NULL]" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;whiteSpace=wrap;html=1;" vertex="1" parent="tbl_audit">
+          <mxGeometry y="88" width="350" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="aud_c4" value="       seat_code : VARCHAR(5) [NOT NULL]" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;whiteSpace=wrap;html=1;" vertex="1" parent="tbl_audit">
+          <mxGeometry y="116" width="350" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="aud_c5" value="       old_status : VARCHAR(20) [NOT NULL]" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;whiteSpace=wrap;html=1;" vertex="1" parent="tbl_audit">
+          <mxGeometry y="144" width="350" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="aud_c6" value="       new_status : VARCHAR(20) [NOT NULL]" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;whiteSpace=wrap;html=1;" vertex="1" parent="tbl_audit">
+          <mxGeometry y="172" width="350" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="aud_c7" value="       old_version / new_version : INT" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;whiteSpace=wrap;html=1;" vertex="1" parent="tbl_audit">
+          <mxGeometry y="200" width="350" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="aud_c8" value="       changed_at : TIMESTAMP(3) [Millisecond]" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;whiteSpace=wrap;html=1;" vertex="1" parent="tbl_audit">
+          <mxGeometry y="228" width="350" height="28" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== TABLE 7: BOOKING_SEATS (M:N JUNCTION) ==================== -->
+        <mxCell id="tbl_booking_seats" value="booking_seats (M:N Junction Table)" style="swimlane;fontStyle=1;fontSize=13;childLayout=stackLayout;horizontal=1;startSize=32;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#fce7f3;strokeColor=#db2777;fontColor=#831843;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="430" width="350" height="144" as="geometry" />
+        </mxCell>
+        <mxCell id="bs_c1" value="PK   booking_seat_id : INT AUTO_INCREMENT" style="text;strokeColor=#fbcfe8;fillColor=#fdf2f8;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=5;fontSize=11;whiteSpace=wrap;html=1;fontColor=#9d174d;" vertex="1" parent="tbl_booking_seats">
+          <mxGeometry y="32" width="350" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="bs_c2" value="FK   booking_id : INT [NOT NULL, UK1]" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=1;fontSize=11;whiteSpace=wrap;html=1;fontColor=#be185d;" vertex="1" parent="tbl_booking_seats">
+          <mxGeometry y="60" width="350" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="bs_c3" value="FK   show_seat_id : INT [NOT NULL, UK1]" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=1;fontSize=11;whiteSpace=wrap;html=1;fontColor=#be185d;" vertex="1" parent="tbl_booking_seats">
+          <mxGeometry y="88" width="350" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="bs_c4" value="       price_at_booking : DECIMAL(10,2) [NOT NULL]" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;whiteSpace=wrap;html=1;" vertex="1" parent="tbl_booking_seats">
+          <mxGeometry y="116" width="350" height="28" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== TABLE 8: BOOKINGS ==================== -->
+        <mxCell id="tbl_bookings" value="bookings (Customer Orders)" style="swimlane;fontStyle=1;fontSize=13;childLayout=stackLayout;horizontal=1;startSize=32;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dcfce7;strokeColor=#16a34a;fontColor=#14532d;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="650" width="350" height="256" as="geometry" />
+        </mxCell>
+        <mxCell id="bk_c1" value="PK   booking_id : INT AUTO_INCREMENT" style="text;strokeColor=#bbf7d0;fillColor=#f0fdf4;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=5;fontSize=11;whiteSpace=wrap;html=1;fontColor=#166534;" vertex="1" parent="tbl_bookings">
+          <mxGeometry y="32" width="350" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="bk_c2" value="FK   user_id : INT [NOT NULL]" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=1;fontSize=11;whiteSpace=wrap;html=1;fontColor=#15803d;" vertex="1" parent="tbl_bookings">
+          <mxGeometry y="60" width="350" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="bk_c3" value="FK   show_id : INT [NOT NULL]" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=1;fontSize=11;whiteSpace=wrap;html=1;fontColor=#15803d;" vertex="1" parent="tbl_bookings">
+          <mxGeometry y="88" width="350" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="bk_c4" value="       total_amount : DECIMAL(10,2) [CHECK &gt;= 0]" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;whiteSpace=wrap;html=1;" vertex="1" parent="tbl_bookings">
+          <mxGeometry y="116" width="350" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="bk_c5" value="       booking_status : ENUM(&#39;PENDING&#39;,&#39;CONFIRMED&#39;,&#39;EXPIRED&#39;)" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;whiteSpace=wrap;html=1;" vertex="1" parent="tbl_bookings">
+          <mxGeometry y="144" width="350" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="bk_c6" value="       lock_mode : ENUM(&#39;PESSIMISTIC&#39;,&#39;OPTIMISTIC&#39;)" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;whiteSpace=wrap;html=1;" vertex="1" parent="tbl_bookings">
+          <mxGeometry y="172" width="350" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="bk_c7" value="       expires_at : DATETIME [NOT NULL]" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;whiteSpace=wrap;html=1;" vertex="1" parent="tbl_bookings">
+          <mxGeometry y="200" width="350" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="bk_c8" value="       confirmed_at : DATETIME [NULL]" style="text;strokeColor=none;fillColor=#ffffff;spacingLeft=10;spacingRight=10;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;whiteSpace=wrap;html=1;" vertex="1" parent="tbl_bookings">
+          <mxGeometry y="228" width="350" height="28" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== CROW'S FOOT RELATIONSHIPS ==================== -->
+
+        <!-- 1. movies (1) -> (N) shows -->
+        <mxCell id="rel_movies_shows" value="1 : N (scheduled as)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.28;startArrow=ERmandOne;startFill=0;endArrow=ERmany;endFill=0;strokeWidth=2;strokeColor=#2563eb;fontStyle=1;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="tbl_movies" target="tbl_shows">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- 2. screens (1) -> (N) shows -->
+        <mxCell id="rel_screens_shows" value="1 : N (hosts)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.25;entryX=0;entryY=0.75;startArrow=ERmandOne;startFill=0;endArrow=ERmany;endFill=0;strokeWidth=2;strokeColor=#2563eb;fontStyle=1;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="tbl_screens" target="tbl_shows">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="440" y="383" />
+              <mxPoint x="440" y="292" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 3. shows (1) -> (N) show_seats -->
+        <mxCell id="rel_shows_seats" value="1 : N (contains seats)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;startArrow=ERmandOne;startFill=0;endArrow=ERmany;endFill=0;strokeWidth=2;strokeColor=#4f46e5;fontStyle=1;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="tbl_shows" target="tbl_show_seats">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- 4. users (1) -> (0..N) show_seats (holds temporary lock) -->
+        <mxCell id="rel_users_holds" value="1 : 0..N (holds 5-min TTL lock)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.25;entryX=0;entryY=0.73;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;strokeWidth=2;strokeColor=#d97706;dashed=1;fontStyle=1;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="tbl_users" target="tbl_show_seats">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="440" y="686" />
+              <mxPoint x="440" y="698" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 5. users (1) -> (N) bookings -->
+        <mxCell id="rel_users_bookings" value="1 : N (places order)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=1;startArrow=ERmandOne;startFill=0;endArrow=ERzeroToMany;endFill=0;strokeWidth=2;strokeColor=#16a34a;fontStyle=1;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="tbl_users" target="tbl_bookings">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="215" y="960" />
+              <mxPoint x="1235" y="960" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 6. shows (1) -> (N) bookings -->
+        <mxCell id="rel_shows_bookings" value="1 : N (for show)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.75;entryX=0;entryY=0.35;startArrow=ERmandOne;startFill=0;endArrow=ERzeroToMany;endFill=0;strokeWidth=2;strokeColor=#4f46e5;fontStyle=1;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="tbl_shows" target="tbl_bookings">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="960" y="292" />
+              <mxPoint x="960" y="740" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 7. show_seats (1) -> (N) booking_seats -->
+        <mxCell id="rel_seats_bseats" value="1 : N (mapped in)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.2;entryX=0;entryY=0.5;startArrow=ERmandOne;startFill=0;endArrow=ERmany;endFill=0;strokeWidth=2;strokeColor=#db2777;fontStyle=1;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="tbl_show_seats" target="tbl_booking_seats">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- 8. bookings (1) -> (N) booking_seats -->
+        <mxCell id="rel_bookings_bseats" value="1 : N (includes seats)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;entryX=0.5;entryY=1;startArrow=ERmandOne;startFill=0;endArrow=ERmany;endFill=0;strokeWidth=2;strokeColor=#db2777;fontStyle=1;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="tbl_bookings" target="tbl_booking_seats">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- 9. show_seats (1) -> (N) seat_audit_logs (Trigger) -->
+        <mxCell id="rel_seats_audit" value="1 : N (Trigger logs state change)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.08;entryX=0;entryY=0.5;startArrow=ERmandOne;startFill=0;endArrow=ERzeroToMany;endFill=0;strokeWidth=2;strokeColor=#9333ea;dashed=1;fontStyle=1;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="tbl_show_seats" target="tbl_audit">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1000" y="460" />
+              <mxPoint x="1000" y="228" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
