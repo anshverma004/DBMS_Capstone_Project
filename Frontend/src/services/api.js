@@ -1,5 +1,5 @@
-export const SOCKET_URL = 'http://localhost:5000';
-const API_BASE = 'http://localhost:5000/api';
+export const SOCKET_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+const API_BASE = `${SOCKET_URL}/api`;
 
 // Helper for JSON requests
 async function request(endpoint, options = {}) {
