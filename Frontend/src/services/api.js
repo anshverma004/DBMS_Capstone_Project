@@ -1,4 +1,4 @@
-export const SOCKET_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+export const SOCKET_URL = import.meta.env.VITE_BACKEND_URL || 'https://high-concurrency-movie-flash-sale-and.onrender.com';
 const API_BASE = `${SOCKET_URL}/api`;
 
 // Helper for JSON requests
