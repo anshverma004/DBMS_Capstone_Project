@@ -1,6 +1,5 @@
 import pool from '../config/db.js';
 
-// Shared service: Fetch complete data for one show (Show + Seats + Bookings + Audit Logs)
 export async function fetchShowDetailsData(showId) {
     const [shows] = await pool.query(
         `SELECT sh.*, m.title AS movie_title, m.genre, m.duration_mins,

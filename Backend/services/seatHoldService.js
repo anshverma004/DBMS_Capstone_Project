@@ -1,6 +1,5 @@
 import pool from '../config/db.js';
 
-// Background service: Release any expired 5-minute seat holds back to AVAILABLE
 export async function releaseExpiredHolds() {
     const conn = await pool.getConnection();
     try {
@@ -27,9 +26,8 @@ export async function releaseExpiredHolds() {
     }
 }
 
-// Core ACID Transaction Service: Hold Seats (Pessimistic or Optimistic)
 export async function holdSeatsTransaction({ showId, userId, seatIds, lockMode = 'PESSIMISTIC' }) {
-    // 1. Sort seat IDs in ascending order so concurrent multi-seat requests never deadlock
+
     const sortedSeatIds = [...new Set(seatIds.map(Number))].sort((a, b) => a - b);
     if (sortedSeatIds.length === 0) {
         const err = new Error('Please select at least one seat.');
@@ -43,7 +41,7 @@ export async function holdSeatsTransaction({ showId, userId, seatIds, lockMode =
 
         let seats;
         if (lockMode === 'PESSIMISTIC') {
-            // PESSIMISTIC LOCKING: Lock the requested seat rows in MySQL InnoDB
+
             const [rows] = await conn.query(
                 `SELECT show_seat_id, seat_code, price, status, version
                  FROM show_seats
@@ -72,7 +70,7 @@ export async function holdSeatsTransaction({ showId, userId, seatIds, lockMode =
                 [userId, sortedSeatIds]
             );
         } else {
-            // OPTIMISTIC LOCKING: Check version numbers without holding row locks
+
             const [rows] = await conn.query(
                 `SELECT show_seat_id, seat_code, price, status, version
                  FROM show_seats
@@ -107,7 +105,6 @@ export async function holdSeatsTransaction({ showId, userId, seatIds, lockMode =
             }
         }
 
-        // Create PENDING booking and map seats in booking_seats
         const totalAmount = seats.reduce((sum, s) => sum + Number(s.price), 0);
 
         const [bookingResult] = await conn.query(

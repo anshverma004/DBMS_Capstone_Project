@@ -14,7 +14,7 @@ export default function Navbar({
     return (
         <header className="bg-slate-900/95 backdrop-blur-md border-b border-slate-800 sticky top-0 z-40 shadow-lg">
             <div className="max-w-7xl mx-auto px-6 py-3.5 flex flex-wrap items-center justify-between gap-4">
-                {/* Brand Logo */}
+                
                 <div
                     onClick={() => setCurrentPage('landing')}
                     className="cursor-pointer flex items-center gap-2.5"
@@ -32,7 +32,7 @@ export default function Navbar({
                     </div>
                 </div>
 
-                {/* Navigation Links & Auth Controls */}
+                
                 <div className="flex flex-wrap items-center gap-2">
                     <button
                         onClick={() => setCurrentPage('landing')}
@@ -76,7 +76,7 @@ export default function Navbar({
                         </>
                     )}
 
-                    {/* ADMIN-ONLY CONTROLS: Hidden from all other users! */}
+                    
                     {isAdmin && (
                         <>
                             <button
@@ -103,7 +103,7 @@ export default function Navbar({
                         </>
                     )}
 
-                    {/* Show Lock Mode & Reset ONLY to Admin on the Seat Booking page */}
+                    
                     {currentPage === 'booking' && isAdmin && (
                         <>
                             <div className="flex items-center gap-1.5 bg-slate-800/90 border border-slate-700 rounded-lg px-2.5 py-1">
@@ -127,7 +127,7 @@ export default function Navbar({
                         </>
                     )}
 
-                    {/* If NOT Logged In -> Show Log In and Sign Up buttons in Navbar */}
+                    
                     {!loggedInUser ? (
                         <div className="flex items-center gap-2">
                             <button

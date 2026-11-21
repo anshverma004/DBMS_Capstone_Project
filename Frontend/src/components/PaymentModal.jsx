@@ -11,7 +11,7 @@ export default function PaymentModal({
     onClose,
     onConfirmPayment
 }) {
-    const [method, setMethod] = useState('INSTANT'); // 'INSTANT' | 'UPI' | 'CARD'
+    const [method, setMethod] = useState('INSTANT');
     const [upiId, setUpiId] = useState('user@okicici');
     const [cardNum, setCardNum] = useState('4532 •••• •••• 8891');
     const [selectedSnacks, setSelectedSnacks] = useState([]);
@@ -49,7 +49,7 @@ export default function PaymentModal({
     return (
         <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full overflow-hidden shadow-2xl">
-                {/* Top Header */}
+                
                 <div className="px-6 py-4 bg-gradient-to-r from-emerald-600 to-teal-700 flex items-center justify-between">
                     <div>
                         <h3 className="text-base font-extrabold text-white">
@@ -69,7 +69,7 @@ export default function PaymentModal({
                 </div>
 
                 <form onSubmit={handlePay} className="p-6 space-y-4">
-                    {/* Optional Cinema F&B Combos */}
+                    
                     <div className="space-y-2">
                         <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">
                             🍿 Add Cinema Snacks (Optional)
@@ -96,7 +96,7 @@ export default function PaymentModal({
                         </div>
                     </div>
 
-                    {/* Promo Coupon Button */}
+                    
                     <div className="flex items-center justify-between bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs">
                         <div>
                             <span className="font-bold text-rose-400">🏷️ FLASH50</span>
@@ -117,7 +117,7 @@ export default function PaymentModal({
                         </button>
                     </div>
 
-                    {/* Ticket Summary Box */}
+                    
                     <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-1.5 text-xs">
                         <div className="flex items-center justify-between">
                             <span className="text-slate-400">Movie &amp; Seats:</span>
@@ -153,7 +153,7 @@ export default function PaymentModal({
                         </div>
                     </div>
 
-                    {/* Payment Method Tabs */}
+                    
                     <div className="space-y-2.5">
                         <div className="grid grid-cols-3 gap-2">
                             {[

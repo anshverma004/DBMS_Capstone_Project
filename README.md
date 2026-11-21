@@ -67,7 +67,7 @@ CAPSTONE PROJECT/
 ├── Backend/
 │   ├── config/db.js                    # MySQL2 Promise Connection Pool
 │   ├── services/                       # seatHoldService.js, showQueryService.js
-│   ├── controllers/                    # auth, show, booking, admin, simulation, analytics
+│   ├── controllers/                    # auth, show, booking, admin, simulation
 │   ├── routes/                         # Modular Express Routes (/api)
 │   └── server.js                       # Express + Socket.io Server & 5s TTL Sweeper
 └── Frontend/src/

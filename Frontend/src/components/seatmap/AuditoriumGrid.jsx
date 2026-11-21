@@ -89,7 +89,7 @@ export default function AuditoriumGrid({
 
     return (
         <>
-            {/* Curved Cinema Screen Banner */}
+            
             <div className="mb-6 text-center">
                 <div className="w-4/5 mx-auto h-2.5 rounded-t-full bg-gradient-to-r from-slate-800 via-cyan-400/90 to-slate-800 shadow-[0_8px_25px_rgba(34,211,238,0.3)]"></div>
                 <span className="text-[10px] uppercase tracking-[0.3em] text-slate-500 mt-2 inline-block">
@@ -97,7 +97,7 @@ export default function AuditoriumGrid({
                 </span>
             </div>
 
-            {/* Color Legend (Standard vs Heatmap Mode) */}
+            
             {!heatmapMode ? (
                 <div className="flex flex-wrap items-center justify-center gap-5 text-xs text-slate-400 mb-6">
                     <span className="flex items-center gap-1.5">
@@ -137,7 +137,7 @@ export default function AuditoriumGrid({
                 </div>
             )}
 
-            {/* Tiered Auditorium Rows with Center Aisle Walkway */}
+            
             <div className="space-y-5 mb-6">
                 {SEAT_TIERS.map((tierGroup) => {
                     if (

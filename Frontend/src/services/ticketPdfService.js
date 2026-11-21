@@ -1,4 +1,3 @@
-// Generates a deterministic SVG QR Code matrix for a given booking ID & seat list
 function generateTicketQrSvg(seedText = 'BMS-1001') {
     const size = 9;
     let hash = 2166136261;
@@ -46,7 +45,7 @@ function buildSingleTicketHtml(booking, currentShow, loggedInUser) {
     return `
         <div class="ticket-wrapper">
             <div class="ticket-card">
-                <!-- Left Main Boarding Pass Section -->
+                
                 <div class="ticket-main">
                     <div class="brand-row">
                         <div>
@@ -98,14 +97,14 @@ function buildSingleTicketHtml(booking, currentShow, loggedInUser) {
                     </div>
                 </div>
 
-                <!-- Perforated Tear Line -->
+                
                 <div class="ticket-divider">
                     <div class="notch-top"></div>
                     <div class="dashed-line"></div>
                     <div class="notch-bottom"></div>
                 </div>
 
-                <!-- Right QR Stub -->
+                
                 <div class="ticket-stub">
                     <div class="stub-tag">GATE ENTRY QR</div>
                     <div class="qr-box">${qrSvg}</div>

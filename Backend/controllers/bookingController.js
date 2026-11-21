@@ -2,7 +2,6 @@ import pool from '../config/db.js';
 import { releaseExpiredHolds, holdSeatsTransaction } from '../services/seatHoldService.js';
 import { fetchShowDetailsData } from '../services/showQueryService.js';
 
-// 1. POST /api/shows/:showId/hold
 export async function holdSeats(req, res) {
     try {
         await releaseExpiredHolds();
@@ -23,7 +22,6 @@ export async function holdSeats(req, res) {
     }
 }
 
-// 2. POST /api/bookings/:bookingId/confirm
 export async function confirmBooking(req, res) {
     const bookingId = Number(req.params.bookingId);
     const conn = await pool.getConnection();
@@ -76,7 +74,6 @@ export async function confirmBooking(req, res) {
     }
 }
 
-// 3. POST /api/bookings/:bookingId/cancel (Supports both PENDING hold release & CONFIRMED ticket refund)
 export async function cancelBooking(req, res) {
     const bookingId = Number(req.params.bookingId);
     const conn = await pool.getConnection();

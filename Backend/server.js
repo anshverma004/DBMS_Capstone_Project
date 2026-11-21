@@ -18,16 +18,13 @@ const io = new Server(server, {
 app.use(cors());
 app.use(express.json());
 
-// Attach Socket.io to req so controllers can broadcast real-time updates
 app.use((req, res, next) => {
     req.io = io;
     next();
 });
 
-// Mount API Routes
 app.use('/api', apiRoutes);
 
-// Background job: release expired 5-minute seat holds every 5 seconds
 setInterval(releaseExpiredHolds, 5000);
 
 const PORT = process.env.PORT || 5000;

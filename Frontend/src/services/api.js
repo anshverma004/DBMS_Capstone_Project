@@ -15,9 +15,7 @@ export {
     holdSeatsApi,
     confirmBookingApi,
     cancelBookingApi,
-    simulateRaceApi,
-    runPresetQueryApi,
-    runCustomSqlApi
+    simulateRaceApi
 } from './bookingService';
 export { exportAuditLogsToCsv } from './csvExportService';
 export { openPrintableTicketPdf } from './ticketPdfService';

@@ -1,6 +1,5 @@
 import pool from '../config/db.js';
 
-// 1. GET /api/users
 export async function getUsers(req, res) {
     try {
         const [users] = await pool.query('SELECT * FROM users ORDER BY user_id ASC');
@@ -10,7 +9,6 @@ export async function getUsers(req, res) {
     }
 }
 
-// 2. POST /api/auth/signup (Creates a user in MySQL users table)
 export async function signupUser(req, res) {
     try {
         const { fullName, email } = req.body;
@@ -54,7 +52,6 @@ export async function signupUser(req, res) {
     }
 }
 
-// 3. POST /api/auth/login (Authenticates an existing user from MySQL users table)
 export async function loginUser(req, res) {
     try {
         const { email } = req.body;

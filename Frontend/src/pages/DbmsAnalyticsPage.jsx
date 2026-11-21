@@ -17,7 +17,7 @@ export default function DbmsAnalyticsPage({
 
     return (
         <div className="space-y-6 py-2">
-            {/* TOP HEADER */}
+            
             <div className="relative overflow-hidden bg-gradient-to-r from-slate-900 via-indigo-950/80 to-slate-900 border border-cyan-500/30 rounded-2xl p-6 flex flex-wrap items-center justify-between gap-4 shadow-[0_0_40px_rgba(6,182,212,0.12)]">
                 <div>
                     <div className="flex items-center gap-2">

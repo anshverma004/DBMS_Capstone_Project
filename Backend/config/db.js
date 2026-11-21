@@ -1,8 +1,6 @@
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
-import { fileURLToPath } from 'url';
-
-// Properly decode Windows folder spaces in the path to backend/.env
+import { fileURLToPath } from 'url';
 const envPath = fileURLToPath(new URL('../.env', import.meta.url));
 dotenv.config({ path: envPath });
 

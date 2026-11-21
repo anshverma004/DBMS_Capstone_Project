@@ -1,13 +1,6 @@
--- ============================================================================
--- PROJECT: High-Concurrency Movie Flash-Sale & Seat Reservation System
--- MODEL:   Relational / Entity-Relationship (3NF Normalized)
--- ENGINE:  MySQL InnoDB (Row-Level Locking & ACID Transactions)
--- ============================================================================
-
 CREATE DATABASE IF NOT EXISTS flash_movie_booking;
 USE flash_movie_booking;
 
--- Drop existing tables in reverse dependency order for clean re-runs
 DROP TRIGGER IF EXISTS trg_after_show_seat_update;
 DROP TABLE IF EXISTS seat_audit_logs;
 DROP TABLE IF EXISTS booking_seats;
@@ -18,9 +11,6 @@ DROP TABLE IF EXISTS screens;
 DROP TABLE IF EXISTS movies;
 DROP TABLE IF EXISTS users;
 
--- ============================================================================
--- 1. TABLE: users
--- ============================================================================
 CREATE TABLE users (
     user_id INT AUTO_INCREMENT,
     full_name VARCHAR(100) NOT NULL,
@@ -30,9 +20,6 @@ CREATE TABLE users (
     CONSTRAINT uk_users_email UNIQUE (email)
 ) ENGINE=InnoDB;
 
--- ============================================================================
--- 2. TABLE: movies
--- ============================================================================
 CREATE TABLE movies (
     movie_id INT AUTO_INCREMENT,
     title VARCHAR(150) NOT NULL,
@@ -42,9 +29,6 @@ CREATE TABLE movies (
     CONSTRAINT chk_movies_duration CHECK (duration_mins > 0)
 ) ENGINE=InnoDB;
 
--- ============================================================================
--- 3. TABLE: screens (Cinema Auditoriums)
--- ============================================================================
 CREATE TABLE screens (
     screen_id INT AUTO_INCREMENT,
     screen_name VARCHAR(100) NOT NULL,
@@ -58,9 +42,6 @@ CREATE TABLE screens (
     CONSTRAINT chk_screens_capacity CHECK (total_capacity = total_rows * seats_per_row)
 ) ENGINE=InnoDB;
 
--- ============================================================================
--- 4. TABLE: shows (Showtimes & Flash-Sale Drops)
--- ============================================================================
 CREATE TABLE shows (
     show_id INT AUTO_INCREMENT,
     movie_id INT NOT NULL,
@@ -77,9 +58,6 @@ CREATE TABLE shows (
     CONSTRAINT chk_shows_available CHECK (available_seats >= 0)
 ) ENGINE=InnoDB;
 
--- ============================================================================
--- 5. TABLE: show_seats (Core High-Concurrency & Locking Inventory Table)
--- ============================================================================
 CREATE TABLE show_seats (
     show_seat_id INT AUTO_INCREMENT,
     show_id INT NOT NULL,
@@ -102,9 +80,6 @@ CREATE TABLE show_seats (
     INDEX idx_show_status_expiry (show_id, status, held_until)
 ) ENGINE=InnoDB;
 
--- ============================================================================
--- 6. TABLE: bookings (Customer Orders & Checkout Lifecycle)
--- ============================================================================
 CREATE TABLE bookings (
     booking_id INT AUTO_INCREMENT,
     user_id INT NOT NULL,
@@ -121,9 +96,6 @@ CREATE TABLE bookings (
     CONSTRAINT chk_bookings_amount CHECK (total_amount >= 0)
 ) ENGINE=InnoDB;
 
--- ============================================================================
--- 7. TABLE: booking_seats (M:N Junction Table for Atomic Group Bookings)
--- ============================================================================
 CREATE TABLE booking_seats (
     booking_seat_id INT AUTO_INCREMENT,
     booking_id INT NOT NULL,
@@ -135,9 +107,6 @@ CREATE TABLE booking_seats (
     CONSTRAINT uk_booking_seat UNIQUE (booking_id, show_seat_id)
 ) ENGINE=InnoDB;
 
--- ============================================================================
--- 8. TABLE: seat_audit_logs (Millisecond Audit Log Populated via Trigger)
--- ============================================================================
 CREATE TABLE seat_audit_logs (
     log_id BIGINT AUTO_INCREMENT,
     show_seat_id INT NOT NULL,
@@ -153,16 +122,12 @@ CREATE TABLE seat_audit_logs (
     CONSTRAINT fk_audit_show_seat FOREIGN KEY (show_seat_id) REFERENCES show_seats(show_seat_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- ============================================================================
--- TRIGGER: Automatically log seat state transitions & maintain available_seats
--- ============================================================================
 DELIMITER $$
 
 CREATE TRIGGER trg_after_show_seat_update
 AFTER UPDATE ON show_seats
 FOR EACH ROW
 BEGIN
-    -- Log every status or version transition for concurrency verification
     IF OLD.status <> NEW.status OR OLD.version <> NEW.version THEN
         INSERT INTO seat_audit_logs (
             show_seat_id,
@@ -185,7 +150,6 @@ BEGIN
         );
     END IF;
 
-    -- Keep shows.available_seats synchronized automatically
     IF OLD.status = 'AVAILABLE' AND NEW.status IN ('HELD', 'BOOKED') THEN
         UPDATE shows
         SET available_seats = available_seats - 1,

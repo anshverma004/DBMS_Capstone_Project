@@ -16,7 +16,6 @@ export function computeAnalyticsTelemetry(seats = [], shows = []) {
         .reduce((sum, s) => sum + Number(s.price), 0);
     const maxCapacityRevenue = seats.reduce((sum, s) => sum + Number(s.price), 0) || 10000;
 
-    // SVG Donut Ring Math (radius = 52)
     const radius = 52;
     const circumference = 2 * Math.PI * radius;
     const availArc = totalSeats > 0 ? (availableCount / totalSeats) * circumference : 0;

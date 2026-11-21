@@ -2,7 +2,6 @@ import pool from '../config/db.js';
 import { releaseExpiredHolds } from '../services/seatHoldService.js';
 import { fetchShowDetailsData } from '../services/showQueryService.js';
 
-// 1. GET /api/shows
 export async function getShows(req, res) {
     try {
         await releaseExpiredHolds();
@@ -20,7 +19,6 @@ export async function getShows(req, res) {
     }
 }
 
-// 2. GET /api/shows/:showId
 export async function getShowById(req, res) {
     try {
         await releaseExpiredHolds();

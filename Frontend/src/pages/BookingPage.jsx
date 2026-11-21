@@ -24,7 +24,7 @@ export default function BookingPage({
 }) {
     return (
         <div className="space-y-6">
-            {/* Top Breadcrumb Bar */}
+            
             <div className="bg-slate-900 border border-slate-800 rounded-2xl px-5 py-3.5 flex flex-wrap items-center justify-between gap-4">
                 <div>
                     <span className="text-[11px] font-bold uppercase tracking-wider text-rose-400">

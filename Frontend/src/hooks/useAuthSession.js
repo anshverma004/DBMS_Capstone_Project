@@ -53,7 +53,7 @@ export function useAuthSession({ setUsers, setSelectedSeatIds, setMessage }) {
             }
             localStorage.setItem(SESSION_PAGE_KEY, currentPage);
         } catch {
-            // ignore storage errors
+
         }
     }, [loggedInUser, currentPage]);
 

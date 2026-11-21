@@ -12,7 +12,7 @@ export default function ActiveHoldsList({
 }) {
     return (
         <>
-            {/* ACTIVE PENDING HOLDS (LIVE 1-SECOND COUNTDOWN CHECKOUT) */}
+            
             <div className="border-t border-slate-800 pt-5">
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                     <h3 className="text-sm font-bold text-white">
@@ -104,7 +104,7 @@ export default function ActiveHoldsList({
                 )}
             </div>
 
-            {/* CONFIRMED M-TICKETS & RECENT ORDERS */}
+            
             {confirmedBookings.length > 0 && (
                 <div className="border-t border-slate-800 pt-5 mt-5">
                     <h3 className="text-sm font-bold text-white mb-3">

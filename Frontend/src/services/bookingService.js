@@ -17,12 +17,3 @@ export const simulateRaceApi = (showId, payload) =>
         method: 'POST',
         body: JSON.stringify(payload)
     });
-
-export const runPresetQueryApi = (queryKey) =>
-    request(`/analytics/query/${queryKey}`);
-
-export const runCustomSqlApi = (sql) =>
-    request('/analytics/sql', {
-        method: 'POST',
-        body: JSON.stringify({ sql })
-    });

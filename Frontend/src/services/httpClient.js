@@ -22,7 +22,7 @@ export function saveLocalRegisteredUser(user) {
         list.push(user);
         localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(list));
     } catch {
-        // ignore storage errors
+
     }
 }
 

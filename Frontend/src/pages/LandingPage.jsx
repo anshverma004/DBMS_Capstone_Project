@@ -8,7 +8,7 @@ export default function LandingPage({
 }) {
     return (
         <div className="space-y-12 py-8">
-            {/* 1. HERO WELCOME BANNER */}
+            
             <div className="relative overflow-hidden rounded-3xl border border-rose-500/30 bg-gradient-to-br from-rose-950 via-slate-900 to-indigo-950 p-8 md:p-14 shadow-2xl text-center">
                 <div className="max-w-3xl mx-auto space-y-6">
                     <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs font-bold uppercase tracking-wider">
@@ -53,7 +53,7 @@ export default function LandingPage({
                 </div>
             </div>
 
-            {/* 2. HOW IT WORKS (3-STEP FLOW) */}
+            
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-2.5 text-center">
                     <div className="w-11 h-11 mx-auto rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-400 flex items-center justify-center font-extrabold text-sm">

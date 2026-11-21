@@ -12,7 +12,7 @@ export default function TelemetryKpiCards({
 }) {
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* KPI 1 */}
+            
             <div className="bg-slate-900 border border-emerald-500/30 rounded-2xl p-5 shadow-xl relative overflow-hidden">
                 <span className="text-[11px] font-mono uppercase text-slate-400 block">
                     Confirmed Box-Office
@@ -37,7 +37,7 @@ export default function TelemetryKpiCards({
                 </svg>
             </div>
 
-            {/* KPI 2 */}
+            
             <div className="bg-slate-900 border border-cyan-500/30 rounded-2xl p-5 shadow-xl relative overflow-hidden">
                 <span className="text-[11px] font-mono uppercase text-slate-400 block">
                     Auditorium Occupancy
@@ -62,7 +62,7 @@ export default function TelemetryKpiCards({
                 </svg>
             </div>
 
-            {/* KPI 3 */}
+            
             <div className="bg-slate-900 border border-amber-500/30 rounded-2xl p-5 shadow-xl relative overflow-hidden">
                 <span className="text-[11px] font-mono uppercase text-slate-400 block">
                     Trigger Audit Events
@@ -87,7 +87,7 @@ export default function TelemetryKpiCards({
                 </svg>
             </div>
 
-            {/* KPI 4 */}
+            
             <div className="bg-slate-900 border border-indigo-500/30 rounded-2xl p-5 shadow-xl relative overflow-hidden">
                 <span className="text-[11px] font-mono uppercase text-slate-400 block">
                     Concurrency Integrity

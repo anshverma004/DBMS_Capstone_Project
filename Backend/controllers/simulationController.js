@@ -2,7 +2,6 @@ import pool from '../config/db.js';
 import { releaseExpiredHolds, holdSeatsTransaction } from '../services/seatHoldService.js';
 import { fetchShowDetailsData } from '../services/showQueryService.js';
 
-// POST /api/shows/:showId/simulate-race (Single-Seat Stampede & Multi-Seat Reverse-Order Deadlock Test)
 export async function simulateConcurrencyRace(req, res) {
     try {
         await releaseExpiredHolds();
@@ -17,8 +16,6 @@ export async function simulateConcurrencyRace(req, res) {
         const [users] = await pool.query('SELECT user_id, full_name FROM users');
         const startTime = Date.now();
 
-        // Fire all N requests simultaneously at the exact same millisecond
-        // If reverseOrderDeadlockTest is enabled with 2+ seats, even requests send [A, B] and odd requests send [B, A]
         const requests = Array.from({ length: Number(concurrentUsers) }, (_, idx) => {
             const randomUser = users[idx % users.length];
             const orderedIds =

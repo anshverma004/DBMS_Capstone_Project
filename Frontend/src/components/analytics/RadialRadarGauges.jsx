@@ -17,7 +17,7 @@ export default function RadialRadarGauges({
 }) {
     return (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-            {/* LEFT 4 COLS: SEAT STATE DONUT */}
+            
             <div className="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
                 <div>
                     <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-400 block">
@@ -107,7 +107,7 @@ export default function RadialRadarGauges({
                 </div>
             </div>
 
-            {/* MIDDLE 4 COLS: 3-RING CONCENTRIC TIER RADAR GAUGE */}
+            
             <div className="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
                 <div>
                     <span className="text-[10px] font-mono uppercase tracking-wider text-indigo-400 block">
@@ -170,7 +170,7 @@ export default function RadialRadarGauges({
                 </div>
             </div>
 
-            {/* RIGHT 4 COLS: 2D DIGITAL AUDITORIUM RADAR MATRIX */}
+            
             <div className="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
                 <div className="flex items-center justify-between mb-2">
                     <div>

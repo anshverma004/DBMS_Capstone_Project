@@ -2,7 +2,6 @@ import pool from '../config/db.js';
 import { releaseExpiredHolds } from '../services/seatHoldService.js';
 import { fetchShowDetailsData } from '../services/showQueryService.js';
 
-// 1. POST /api/shows/create (Inserts Movie + Show and calls Stored Procedure sp_generate_show_seats)
 export async function createMovieAndShow(req, res) {
     const {
         title,
@@ -67,7 +66,6 @@ export async function createMovieAndShow(req, res) {
     }
 }
 
-// 2. DELETE /api/shows/:showId (Admin Remove Show - cascades to show_seats and seat_audit_logs)
 export async function deleteCustomShow(req, res) {
     try {
         const showId = Number(req.params.showId);
@@ -89,7 +87,6 @@ export async function deleteCustomShow(req, res) {
     }
 }
 
-// 3. POST /api/shows/:showId/reset (Calls Stored Procedure sp_reset_show_demo)
 export async function resetShowDemo(req, res) {
     try {
         const showId = Number(req.params.showId);
@@ -104,7 +101,6 @@ export async function resetShowDemo(req, res) {
     }
 }
 
-// 4. POST /api/shows/:showId/force-expire (Fast-forwards 5-min TTL timer for instant viva demo)
 export async function forceExpireHolds(req, res) {
     try {
         const showId = Number(req.params.showId);
@@ -137,7 +133,6 @@ export async function forceExpireHolds(req, res) {
     }
 }
 
-// 5. POST /api/shows/:showId/toggle-flash-sale (Toggles Flash-Sale pricing in MySQL)
 export async function toggleFlashSale(req, res) {
     try {
         const showId = Number(req.params.showId);
@@ -180,7 +175,6 @@ export async function toggleFlashSale(req, res) {
     }
 }
 
-// 6. POST /api/shows/:showId/crowd-fill (Simulates realistic theater occupancy by booking random available seats)
 export async function simulateCrowdFill(req, res) {
     const showId = Number(req.params.showId);
     const count = Math.min(25, Math.max(1, Number(req.body?.count) || 12));

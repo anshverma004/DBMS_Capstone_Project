@@ -1,4 +1,3 @@
-// Rich BookMyShow-style theater venue, city & showtime slots metadata
 export const DATE_TABS = [
     { id: 'today', day: 'TODAY', date: '21 NOV', label: 'Flash Drop Live' },
     { id: 'tomorrow', day: 'TOMORROW', date: '22 NOV', label: 'Premiere Day' },

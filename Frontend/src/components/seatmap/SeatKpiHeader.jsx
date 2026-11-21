@@ -18,7 +18,7 @@ export default function SeatKpiHeader({
 }) {
     return (
         <>
-            {/* 1. LIVE SHOW KPI ANALYTICS BAR */}
+            
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="bg-slate-900 border border-slate-800 rounded-xl p-3.5">
                     <span className="text-[11px] text-slate-400 block">🟢 Available Seats</span>
@@ -40,7 +40,7 @@ export default function SeatKpiHeader({
                 </div>
             </div>
 
-            {/* 2. TOP AUDITORIUM BAR + SMART PRESETS + FILTERS */}
+            
             <div className="flex flex-wrap items-center justify-between gap-4 pb-4 mb-4 border-b border-slate-800">
                 <div>
                     <h3 className="text-base font-bold text-white flex items-center gap-2">
