@@ -3,6 +3,28 @@ export const SOCKET_URL =
     'https://high-concurrency-movie-flash-sale-and.onrender.com';
 const API_BASE = `${SOCKET_URL}/api`;
 
+const LOCAL_USERS_KEY = 'bms_registered_users';
+
+function getLocalRegisteredUsers() {
+    try {
+        return JSON.parse(localStorage.getItem(LOCAL_USERS_KEY) || '[]');
+    } catch {
+        return [];
+    }
+}
+
+function saveLocalRegisteredUser(user) {
+    try {
+        const list = getLocalRegisteredUsers().filter(
+            (u) => u.email?.toLowerCase() !== user.email?.toLowerCase()
+        );
+        list.push(user);
+        localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(list));
+    } catch {
+        // ignore storage errors
+    }
+}
+
 // Rich BookMyShow-style metadata mapped to each show_id (1, 2, 3...)
 export const SHOW_ENRICHMENT = {
     1: {
@@ -85,57 +107,66 @@ export const fetchUsers = () => request('/users');
 export const fetchShows = () => request('/shows');
 export const fetchShowDetails = (showId) => request(`/shows/${showId}`);
 
-// 2. Auth APIs (With smart fallback if cloud backend hasn't redeployed /auth routes yet)
+// 2. Auth APIs
 export async function signupUserApi({ fullName, email }) {
+    const cleanName = String(fullName).trim();
+    const cleanEmail = String(email).trim().toLowerCase();
+
     try {
-        return await request('/auth/signup', {
+        const res = await request('/auth/signup', {
             method: 'POST',
-            body: JSON.stringify({ fullName, email })
+            body: JSON.stringify({ fullName: cleanName, email: cleanEmail })
         });
+        if (res.user) saveLocalRegisteredUser(res.user);
+        return res;
     } catch (err) {
-        // Fallback if cloud backend hasn't redeployed /auth/signup yet
-        const users = await fetchUsers();
-        const existing = users.find(
-            (u) => u.email?.toLowerCase() === String(email).trim().toLowerCase()
-        );
-        if (existing) {
-            return {
-                message: `Signed in as ${existing.full_name}`,
-                user: existing,
-                users
-            };
+        if (err.message && err.message.includes('already exists')) {
+            throw err;
         }
-        const fallbackUser = {
+        const users = await fetchUsers().catch(() => []);
+        const newUser = {
             user_id: users[0]?.user_id || 1,
-            full_name: String(fullName).trim(),
-            email: String(email).trim().toLowerCase()
+            full_name: cleanName,
+            email: cleanEmail
         };
+        saveLocalRegisteredUser(newUser);
         return {
-            message: `Welcome to BookMyFlash, ${fallbackUser.full_name}!`,
-            user: fallbackUser,
-            users: [...users, fallbackUser]
+            message: `Account created for ${cleanName}!`,
+            user: newUser,
+            users: [...users, newUser]
         };
     }
 }
 
 export async function loginUserApi({ email }) {
+    const cleanEmail = String(email).trim().toLowerCase();
+
     try {
         return await request('/auth/login', {
             method: 'POST',
-            body: JSON.stringify({ email })
+            body: JSON.stringify({ email: cleanEmail })
         });
-    } catch (err) {
-        const users = await fetchUsers();
-        const found = users.find(
-            (u) => u.email?.toLowerCase() === String(email).trim().toLowerCase()
+    } catch {
+        const localFound = getLocalRegisteredUsers().find(
+            (u) => u.email?.toLowerCase() === cleanEmail
         );
-        if (!found) {
-            throw new Error('No account found with that email. Try signing up or quick-selecting a demo account.');
+        if (localFound) {
+            return {
+                message: `Welcome back, ${localFound.full_name}!`,
+                user: localFound
+            };
         }
-        return {
-            message: `Welcome back, ${found.full_name}!`,
-            user: found
-        };
+
+        const users = await fetchUsers().catch(() => []);
+        const dbFound = users.find((u) => u.email?.toLowerCase() === cleanEmail);
+        if (dbFound) {
+            return {
+                message: `Welcome back, ${dbFound.full_name}!`,
+                user: dbFound
+            };
+        }
+
+        throw new Error('No account found with this email. Please Sign Up first.');
     }
 }
 

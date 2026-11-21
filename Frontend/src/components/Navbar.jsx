@@ -5,9 +5,6 @@ export default function Navbar({
     setCurrentPage,
     loggedInUser,
     onLogout,
-    users,
-    selectedUserId,
-    setSelectedUserId,
     lockMode,
     setLockMode,
     onResetShow
@@ -59,24 +56,9 @@ export default function Navbar({
                         </button>
                     )}
 
-                    {/* Show Booking Controls ONLY on the Seat Booking page */}
+                    {/* Show Lock Mode & Reset ONLY on the Seat Booking page */}
                     {currentPage === 'booking' && loggedInUser && (
                         <>
-                            <div className="flex items-center gap-1.5 bg-slate-800/90 border border-slate-700 rounded-lg px-2.5 py-1">
-                                <label className="text-[11px] text-slate-400">User:</label>
-                                <select
-                                    value={selectedUserId}
-                                    onChange={(e) => setSelectedUserId(Number(e.target.value))}
-                                    className="bg-slate-900 text-emerald-400 text-xs font-semibold px-2 py-0.5 rounded border border-slate-700 focus:outline-none cursor-pointer"
-                                >
-                                    {users.map((u) => (
-                                        <option key={u.user_id} value={u.user_id}>
-                                            #{u.user_id} - {u.full_name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
                             <div className="flex items-center gap-1.5 bg-slate-800/90 border border-slate-700 rounded-lg px-2.5 py-1">
                                 <label className="text-[11px] text-slate-400">Lock:</label>
                                 <select

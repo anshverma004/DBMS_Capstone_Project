@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
 export default function LoginPage({
-    users,
     prefilledEmail,
     onLoginSubmit,
     onGoToSignup
@@ -22,7 +21,7 @@ export default function LoginPage({
         setError('');
         setLoading(true);
         try {
-            await onLoginSubmit({ email });
+            await onLoginSubmit({ email, password });
         } catch (err) {
             setError(err.message);
         } finally {
@@ -38,7 +37,7 @@ export default function LoginPage({
                         Log In to BookMyShow
                     </h2>
                     <p className="text-xs text-rose-100 mt-0.5">
-                        Sign in to search theaters in your city and book movie seats
+                        Sign in with your registered email and password
                     </p>
                 </div>
 
@@ -63,7 +62,7 @@ export default function LoginPage({
                             <input
                                 type="email"
                                 required
-                                placeholder="e.g. aarav.sharma@example.com"
+                                placeholder="Enter your email address"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-rose-500"
@@ -92,30 +91,6 @@ export default function LoginPage({
                             {loading ? 'Signing In...' : 'Log In & Search Theaters →'}
                         </button>
                     </form>
-
-                    {/* Quick Demo Email Fill */}
-                    {users.length > 0 && (
-                        <div className="border-t border-slate-800 pt-4">
-                            <p className="text-[11px] text-slate-400 mb-2">
-                                Or click any existing account to auto-fill email:
-                            </p>
-                            <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
-                                {users.slice(0, 6).map((u) => (
-                                    <button
-                                        key={u.user_id}
-                                        type="button"
-                                        onClick={() => {
-                                            setEmail(u.email);
-                                            setPassword('123456');
-                                        }}
-                                        className="px-2.5 py-1 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 text-[11px] text-slate-300 cursor-pointer"
-                                    >
-                                        {u.full_name}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
 
                     <div className="border-t border-slate-800 pt-4 text-center">
                         <p className="text-xs text-slate-400">
