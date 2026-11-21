@@ -13,6 +13,7 @@ export default function BookingPage({
     bookings,
     onConfirmBooking,
     onCancelBooking,
+    onForceExpireHolds,
     auditLogs,
     onSimulateRace,
     simulationResult,
@@ -64,6 +65,7 @@ export default function BookingPage({
                         bookings={bookings}
                         onConfirmBooking={onConfirmBooking}
                         onCancelBooking={onCancelBooking}
+                        onForceExpireHolds={onForceExpireHolds}
                         currentShow={currentShow}
                     />
                 </div>

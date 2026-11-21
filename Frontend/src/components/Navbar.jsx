@@ -32,7 +32,7 @@ export default function Navbar({
                 </div>
 
                 {/* Navigation Links & Auth Controls */}
-                <div className="flex flex-wrap items-center gap-2.5">
+                <div className="flex flex-wrap items-center gap-2">
                     <button
                         onClick={() => setCurrentPage('landing')}
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
@@ -82,6 +82,17 @@ export default function Navbar({
                                 }`}
                             >
                                 📊 DBMS Analytics
+                            </button>
+
+                            <button
+                                onClick={() => setCurrentPage('admin')}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                                    currentPage === 'admin'
+                                        ? 'bg-amber-500 text-slate-950'
+                                        : 'text-amber-300 hover:text-white bg-amber-950/40 border border-amber-500/30'
+                                }`}
+                            >
+                                🛠️ Admin Control
                             </button>
                         </>
                     )}

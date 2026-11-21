@@ -11,7 +11,10 @@ import {
     confirmBookingApi,
     cancelBookingApi,
     simulateRaceApi,
-    resetShowApi
+    resetShowApi,
+    forceExpireHoldsApi,
+    toggleFlashSaleApi,
+    simulateCrowdFillApi
 } from './services/api';
 import { enrichShow } from './constants/theaterData';
 
@@ -24,11 +27,31 @@ import TheaterSearchPage from './pages/TheaterSearchPage';
 import BookingPage from './pages/BookingPage';
 import MyBookingsPage from './pages/MyBookingsPage';
 import DbmsAnalyticsPage from './pages/DbmsAnalyticsPage';
+import AdminPage from './pages/AdminPage';
+
+const SESSION_USER_KEY = 'bms_active_user';
+const SESSION_PAGE_KEY = 'bms_active_page';
 
 export default function App() {
-    // Pages: 'landing' -> 'signup' -> 'login' -> 'theaters' -> 'booking' -> 'mybookings' -> 'analytics'
-    const [currentPage, setCurrentPage] = useState('landing');
-    const [loggedInUser, setLoggedInUser] = useState(null);
+    const [loggedInUser, setLoggedInUser] = useState(() => {
+        try {
+            const saved = localStorage.getItem(SESSION_USER_KEY);
+            return saved ? JSON.parse(saved) : null;
+        } catch {
+            return null;
+        }
+    });
+
+    const [currentPage, setCurrentPage] = useState(() => {
+        try {
+            const savedUser = localStorage.getItem(SESSION_USER_KEY);
+            const savedPage = localStorage.getItem(SESSION_PAGE_KEY);
+            return savedUser && savedPage ? savedPage : 'landing';
+        } catch {
+            return 'landing';
+        }
+    });
+
     const [prefilledEmail, setPrefilledEmail] = useState('');
     const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
 
@@ -38,7 +61,14 @@ export default function App() {
 
     // Database & booking state
     const [users, setUsers] = useState([]);
-    const [selectedUserId, setSelectedUserId] = useState(1);
+    const [selectedUserId, setSelectedUserId] = useState(() => {
+        try {
+            const saved = JSON.parse(localStorage.getItem(SESSION_USER_KEY) || 'null');
+            return saved?.user_id ? Number(saved.user_id) : 1;
+        } catch {
+            return 1;
+        }
+    });
     const [lockMode, setLockMode] = useState('PESSIMISTIC');
 
     const [shows, setShows] = useState([]);
@@ -52,6 +82,20 @@ export default function App() {
     const [simulationResult, setSimulationResult] = useState(null);
     const [message, setMessage] = useState('');
     const [paymentModalBooking, setPaymentModalBooking] = useState(null);
+
+    // Sync session to localStorage so page refresh keeps user logged in
+    useEffect(() => {
+        try {
+            if (loggedInUser) {
+                localStorage.setItem(SESSION_USER_KEY, JSON.stringify(loggedInUser));
+            } else {
+                localStorage.removeItem(SESSION_USER_KEY);
+            }
+            localStorage.setItem(SESSION_PAGE_KEY, currentPage);
+        } catch {
+            // ignore storage errors
+        }
+    }, [loggedInUser, currentPage]);
 
     // Load users and shows on startup
     async function loadInitialData() {
@@ -207,6 +251,39 @@ export default function App() {
         }
     }
 
+    // Fast-forward 5-minute TTL timer for instant viva demo
+    async function handleForceExpireHolds(targetShowId = selectedShowId) {
+        try {
+            const res = await forceExpireHoldsApi(targetShowId);
+            setMessage(res.message);
+            await loadShowData(selectedShowId);
+        } catch (err) {
+            setMessage(`Error: ${err.message}`);
+        }
+    }
+
+    // Toggle Flash-Sale Mode in MySQL
+    async function handleToggleFlashSale(targetShowId) {
+        try {
+            const res = await toggleFlashSaleApi(targetShowId);
+            setMessage(res.message);
+            await loadShowData(selectedShowId);
+        } catch (err) {
+            setMessage(`Error: ${err.message}`);
+        }
+    }
+
+    // Simulate Theater Crowd Fill in MySQL
+    async function handleCrowdFill(targetShowId, count = 12) {
+        try {
+            const res = await simulateCrowdFillApi(targetShowId, count);
+            setMessage(res.message);
+            await loadShowData(selectedShowId);
+        } catch (err) {
+            setMessage(`Error: ${err.message}`);
+        }
+    }
+
     // Simulate 50 concurrent users (Single-Seat Stampede or Reverse-Order Deadlock Pair Test)
     async function handleSimulateRace(targetSeatIds, concurrentUsers, reverseOrderDeadlockTest = false) {
         try {
@@ -230,9 +307,10 @@ export default function App() {
     }
 
     // Reset show demo (Calls MySQL Stored Procedure)
-    async function handleResetShow() {
+    async function handleResetShow(targetShowId = selectedShowId) {
         try {
-            const res = await resetShowApi(selectedShowId);
+            const idToReset = typeof targetShowId === 'number' ? targetShowId : selectedShowId;
+            const res = await resetShowApi(idToReset);
             setMessage(res.message);
             setSelectedSeatIds([]);
             setSimulationResult(null);
@@ -262,7 +340,7 @@ export default function App() {
                 onLogout={handleLogout}
                 lockMode={lockMode}
                 setLockMode={setLockMode}
-                onResetShow={handleResetShow}
+                onResetShow={() => handleResetShow(selectedShowId)}
                 myBookingsCount={myBookingsCount}
             />
 
@@ -355,6 +433,7 @@ export default function App() {
                         bookings={bookings}
                         onConfirmBooking={handleRequestConfirmPayment}
                         onCancelBooking={handleCancelBooking}
+                        onForceExpireHolds={() => handleForceExpireHolds(selectedShowId)}
                         auditLogs={auditLogs}
                         onSimulateRace={handleSimulateRace}
                         simulationResult={simulationResult}
@@ -383,8 +462,19 @@ export default function App() {
                         bookings={bookings}
                         auditLogs={auditLogs}
                         users={users}
-                        currentShow={currentShowObj}
                         onBackToBooking={() => setCurrentPage('booking')}
+                    />
+                )}
+
+                {/* PAGE 8: DEDICATED CINEMA ADMIN & FLASH-SALE CONTROL CENTER */}
+                {currentPage === 'admin' && (
+                    <AdminPage
+                        shows={shows}
+                        onToggleFlashSale={handleToggleFlashSale}
+                        onCrowdFill={handleCrowdFill}
+                        onForceExpire={handleForceExpireHolds}
+                        onResetShowById={handleResetShow}
+                        onOpenShowInHall={(id) => handleSelectTheaterShow(id)}
                     />
                 )}
             </main>

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { exportAuditLogsToCsv } from '../services/api';
 
 export default function ConcurrencyPanel({
     seats,
@@ -13,8 +14,6 @@ export default function ConcurrencyPanel({
     const [benchmarkHistory, setBenchmarkHistory] = useState([]);
 
     const selectedId = Number(targetSeatId) || availableSeats[0]?.show_seat_id || '';
-
-    // Find a second available seat for the Reverse-Order Deadlock Pair Test
     const secondSeat =
         availableSeats.find((s) => s.show_seat_id !== Number(selectedId)) || null;
 
@@ -55,7 +54,6 @@ export default function ConcurrencyPanel({
                     Test single-seat flash-sale stampedes or reverse-order multi-seat deadlock prevention.
                 </p>
 
-                {/* Test Type Switcher */}
                 <div className="grid grid-cols-2 gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 mb-4">
                     <button
                         type="button"
@@ -101,12 +99,12 @@ export default function ConcurrencyPanel({
                         </select>
                         {testMode === 'DEADLOCK_PAIR' && secondSeat && (
                             <p className="text-[11px] text-indigo-300 mt-1">
-                                🔀 25 requests will lock{' '}
+                                🔀 25 requests lock{' '}
                                 <strong>
                                     ({availableSeats.find((s) => s.show_seat_id === Number(selectedId))?.seat_code},{' '}
                                     {secondSeat.seat_code})
                                 </strong>{' '}
-                                &amp; 25 will lock{' '}
+                                &amp; 25 lock{' '}
                                 <strong>
                                     ({secondSeat.seat_code},{' '}
                                     {availableSeats.find((s) => s.show_seat_id === Number(selectedId))?.seat_code})
@@ -243,11 +241,21 @@ export default function ConcurrencyPanel({
                 )}
             </div>
 
-            {/* 4. MySQL Trigger Audit Logs */}
+            {/* 4. MySQL Trigger Audit Logs + CSV Export */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
-                <h3 className="text-sm font-bold text-white mb-3">
-                    MySQL Trigger Audit Logs (seat_audit_logs)
-                </h3>
+                <div className="flex items-center justify-between gap-2 mb-3">
+                    <h3 className="text-sm font-bold text-white">
+                        MySQL Trigger Audit Logs (seat_audit_logs)
+                    </h3>
+                    {auditLogs.length > 0 && (
+                        <button
+                            onClick={() => exportAuditLogsToCsv(auditLogs)}
+                            className="px-2.5 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 text-[11px] font-bold transition cursor-pointer"
+                        >
+                            📥 Export CSV
+                        </button>
+                    )}
+                </div>
                 <div className="overflow-x-auto max-h-80 overflow-y-auto rounded-lg border border-slate-800">
                     <table className="w-full text-left text-xs text-slate-300">
                         <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] sticky top-0">

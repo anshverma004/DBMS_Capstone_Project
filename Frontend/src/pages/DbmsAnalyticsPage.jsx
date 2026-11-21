@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { exportAuditLogsToCsv } from '../services/api';
 
 const SQL_INSPECTOR_TABS = [
     {
@@ -107,13 +108,39 @@ COMMIT;`
     }
 ];
 
+const VIVA_QA_CARDS = [
+    {
+        q: '1. Why did you choose the InnoDB storage engine instead of MyISAM?',
+        a: 'InnoDB supports ACID Transactions (COMMIT / ROLLBACK), Foreign Key referential integrity, and Row-Level Locking (SELECT ... FOR UPDATE). MyISAM only supports Table-Level Locking, which would block the entire cinema hall whenever one user locks a single seat.'
+    },
+    {
+        q: '2. How does your database satisfy Third Normal Form (3NF)?',
+        a: '1NF is satisfied by using the booking_seats M:N junction table instead of storing comma-separated seats. 2NF is satisfied because all non-key attributes depend on the full primary key. 3NF is satisfied by separating movies and screens from shows so movie titles, genres, and screen capacities have zero transitive dependency or redundancy.'
+    },
+    {
+        q: '3. How do you prevent Circular Deadlocks when two users book multiple seats at once?',
+        a: 'Before starting the transaction, we deterministically sort the requested seatIds array in ascending numerical order (ORDER BY show_seat_id ASC). Even if User A selects (C5, C6) and User B selects (C6, C5), both transactions request the lock on C5 first and C6 second—eliminating circular wait.'
+    },
+    {
+        q: '4. When is Pessimistic Locking better than Optimistic Locking?',
+        a: 'Pessimistic Locking (SELECT ... FOR UPDATE) is best under extreme contention (flash-sale premiere drops) because it serializes conflicting requests at the row level. Optimistic Locking (version column) is best for low-to-moderate contention because it avoids lock overhead during reads and detects conflicts at UPDATE time.'
+    },
+    {
+        q: '5. Why not keep a MySQL transaction open while the user enters their UPI PIN for 5 minutes?',
+        a: 'Keeping a database transaction and row lock open for 5 minutes would tie up connections from the connection pool (exhausting 30 connections with just 30 users). Instead, we use a Two-Phase State Machine: a 5-millisecond transaction sets status = HELD with held_until = NOW() + 5 MINUTE and immediately releases the connection.'
+    },
+    {
+        q: '6. What role does the Composite Index idx_show_status_expiry play in concurrency?',
+        a: 'In MySQL InnoDB, row locks are placed on index records. Without an index on (show_id, status, held_until), queries scanning for available or expired seats would perform a full table scan and lock every row in show_seats.'
+    }
+];
+
 export default function DbmsAnalyticsPage({
     shows,
     seats,
     bookings,
     auditLogs,
     users,
-    currentShow,
     onBackToBooking
 }) {
     const [activeSqlTab, setActiveSqlTab] = useState('pessimistic');
@@ -146,17 +173,27 @@ export default function DbmsAnalyticsPage({
                         📊 Live DBMS Analytics, 3NF Schema &amp; SQL Inspector
                     </h1>
                     <p className="text-xs text-slate-400 mt-1">
-                        Inspect live tier occupancy, 3NF normalized table statistics, and the exact
-                        MySQL InnoDB concurrency queries powering this system.
+                        Inspect live tier occupancy, 3NF normalized table statistics, ER relationships,
+                        and the exact MySQL InnoDB concurrency queries powering this system.
                     </p>
                 </div>
 
-                <button
-                    onClick={onBackToBooking}
-                    className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-xs font-bold text-white transition cursor-pointer"
-                >
-                    ← Back to Seat Auditorium
-                </button>
+                <div className="flex items-center gap-2.5">
+                    {auditLogs.length > 0 && (
+                        <button
+                            onClick={() => exportAuditLogsToCsv(auditLogs)}
+                            className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white transition cursor-pointer"
+                        >
+                            📥 Export Audit Logs CSV
+                        </button>
+                    )}
+                    <button
+                        onClick={onBackToBooking}
+                        className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-xs font-bold text-white transition cursor-pointer"
+                    >
+                        ← Back to Seat Auditorium
+                    </button>
+                </div>
             </div>
 
             {/* 1. TIER-WISE OCCUPANCY & REVENUE BREAKDOWN */}
@@ -250,10 +287,10 @@ export default function DbmsAnalyticsPage({
                 </div>
             </div>
 
-            {/* 3. 3NF NORMALIZED TABLES LIVE SUMMARY */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
-                <h2 className="text-base font-bold text-white mb-3">
-                    🗄️ 8 Normalized (3NF) MySQL InnoDB Tables — Live Status
+            {/* 3. 3NF NORMALIZED TABLES & ER RELATIONSHIPS */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+                <h2 className="text-base font-bold text-white">
+                    🗄️ 8 Normalized (3NF) MySQL InnoDB Tables &amp; Cardinalities
                 </h2>
                 <div className="overflow-x-auto rounded-xl border border-slate-800">
                     <table className="w-full text-left text-xs text-slate-300">
@@ -262,7 +299,7 @@ export default function DbmsAnalyticsPage({
                                 <th className="px-4 py-2.5">Table Name</th>
                                 <th className="px-4 py-2.5">Normal Form</th>
                                 <th className="px-4 py-2.5">Primary Key</th>
-                                <th className="px-4 py-2.5">Key Constraints / Indexes</th>
+                                <th className="px-4 py-2.5">Relationships &amp; Indexes</th>
                                 <th className="px-4 py-2.5">Live Active Rows</th>
                             </tr>
                         </thead>
@@ -271,60 +308,84 @@ export default function DbmsAnalyticsPage({
                                 <td className="px-4 py-2.5 font-mono font-bold text-white">users</td>
                                 <td className="px-4 py-2.5 text-emerald-400 font-bold">3NF</td>
                                 <td className="px-4 py-2.5 font-mono">user_id</td>
-                                <td className="px-4 py-2.5">UNIQUE (email)</td>
+                                <td className="px-4 py-2.5">1:N -&gt; bookings, 1:0..N -&gt; show_seats (holds)</td>
                                 <td className="px-4 py-2.5 font-bold">{users.length} users</td>
                             </tr>
                             <tr>
                                 <td className="px-4 py-2.5 font-mono font-bold text-white">movies</td>
                                 <td className="px-4 py-2.5 text-emerald-400 font-bold">3NF</td>
                                 <td className="px-4 py-2.5 font-mono">movie_id</td>
-                                <td className="px-4 py-2.5">CHECK (duration_mins &gt; 0)</td>
+                                <td className="px-4 py-2.5">1:N -&gt; shows, CHECK (duration_mins &gt; 0)</td>
                                 <td className="px-4 py-2.5 font-bold">3 movies</td>
                             </tr>
                             <tr>
                                 <td className="px-4 py-2.5 font-mono font-bold text-white">screens</td>
                                 <td className="px-4 py-2.5 text-emerald-400 font-bold">3NF</td>
                                 <td className="px-4 py-2.5 font-mono">screen_id</td>
-                                <td className="px-4 py-2.5">UNIQUE (screen_name), CHECK (capacity)</td>
+                                <td className="px-4 py-2.5">1:N -&gt; shows, UNIQUE (screen_name)</td>
                                 <td className="px-4 py-2.5 font-bold">2 screens</td>
                             </tr>
                             <tr>
                                 <td className="px-4 py-2.5 font-mono font-bold text-white">shows</td>
                                 <td className="px-4 py-2.5 text-emerald-400 font-bold">3NF</td>
                                 <td className="px-4 py-2.5 font-mono">show_id</td>
-                                <td className="px-4 py-2.5">FK (movie_id, screen_id), UNIQUE (screen, time)</td>
+                                <td className="px-4 py-2.5">1:N -&gt; show_seats, UNIQUE (screen_id, show_datetime)</td>
                                 <td className="px-4 py-2.5 font-bold">{shows.length} shows</td>
                             </tr>
                             <tr>
                                 <td className="px-4 py-2.5 font-mono font-bold text-amber-300">show_seats</td>
                                 <td className="px-4 py-2.5 text-emerald-400 font-bold">3NF</td>
                                 <td className="px-4 py-2.5 font-mono">show_seat_id</td>
-                                <td className="px-4 py-2.5">INDEX (show_id, status, held_until), version</td>
-                                <td className="px-4 py-2.5 font-bold">{seats.length} seats (this show)</td>
+                                <td className="px-4 py-2.5">INDEX (show_id, status, held_until), version (OCC)</td>
+                                <td className="px-4 py-2.5 font-bold">{seats.length} seats (active show)</td>
                             </tr>
                             <tr>
                                 <td className="px-4 py-2.5 font-mono font-bold text-white">bookings</td>
                                 <td className="px-4 py-2.5 text-emerald-400 font-bold">3NF</td>
                                 <td className="px-4 py-2.5 font-mono">booking_id</td>
-                                <td className="px-4 py-2.5">FK (user_id, show_id), lock_mode, expires_at</td>
+                                <td className="px-4 py-2.5">1:N -&gt; booking_seats, lock_mode, expires_at</td>
                                 <td className="px-4 py-2.5 font-bold">{bookings.length} recent orders</td>
                             </tr>
                             <tr>
                                 <td className="px-4 py-2.5 font-mono font-bold text-white">booking_seats</td>
                                 <td className="px-4 py-2.5 text-emerald-400 font-bold">3NF (1NF M:N)</td>
                                 <td className="px-4 py-2.5 font-mono">booking_seat_id</td>
-                                <td className="px-4 py-2.5">UNIQUE (booking_id, show_seat_id)</td>
+                                <td className="px-4 py-2.5">Resolves M:N between bookings &amp; show_seats</td>
                                 <td className="px-4 py-2.5 font-bold">Junction mapped</td>
                             </tr>
                             <tr>
                                 <td className="px-4 py-2.5 font-mono font-bold text-indigo-300">seat_audit_logs</td>
                                 <td className="px-4 py-2.5 text-emerald-400 font-bold">3NF</td>
                                 <td className="px-4 py-2.5 font-mono">log_id</td>
-                                <td className="px-4 py-2.5">Populated via Trigger • TIMESTAMP(3)</td>
+                                <td className="px-4 py-2.5">1:N via Trigger • TIMESTAMP(3) millisecond log</td>
                                 <td className="px-4 py-2.5 font-bold">{auditLogs.length} audit logs</td>
                             </tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+
+            {/* 4. BUILT-IN DBMS VIVA Q&A CHEAT-SHEET */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+                <div>
+                    <h2 className="text-base font-bold text-white">
+                        🎓 Built-In DBMS Viva Questions &amp; Answers Reference
+                    </h2>
+                    <p className="text-xs text-slate-400">
+                        Quick engineering answers to the core database questions examiners ask
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {VIVA_QA_CARDS.map((item) => (
+                        <div
+                            key={item.q}
+                            className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2"
+                        >
+                            <h3 className="text-xs font-bold text-amber-300">{item.q}</h3>
+                            <p className="text-xs text-slate-300 leading-relaxed">{item.a}</p>
+                        </div>
+                    ))}
                 </div>
             </div>
         </div>

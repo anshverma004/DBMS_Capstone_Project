@@ -16,10 +16,11 @@ export default function SeatMap({
     bookings,
     onConfirmBooking,
     onCancelBooking,
+    onForceExpireHolds,
     currentShow
 }) {
     const [tickOffset, setTickOffset] = useState(0);
-    const [tierFilter, setTierFilter] = useState('ALL'); // 'ALL' | 'CLASSIC' | 'PRIME' | 'RECLINER' | 'BEST_VIEW'
+    const [tierFilter, setTierFilter] = useState('ALL');
 
     useEffect(() => {
         setTickOffset(0);
@@ -50,7 +51,6 @@ export default function SeatMap({
         0
     );
 
-    // Check if a seat is in the IMAX Acoustic & Visual Sweet Spot (Rows C-D, Seats 4-7)
     function isBestViewSeat(seat) {
         return (
             ['C', 'D'].includes(seat.row_label) &&
@@ -353,12 +353,21 @@ export default function SeatMap({
 
                 {/* 3. ACTIVE PENDING HOLDS (LIVE 1-SECOND COUNTDOWN CHECKOUT) */}
                 <div className="border-t border-slate-800 pt-5">
-                    <h3 className="text-sm font-bold text-white mb-3 flex items-center justify-between">
-                        <span>⏳ Active Pending Holds (5-Minute TTL Checkout)</span>
-                        <span className="text-[11px] font-normal text-slate-400">
-                            Auto-releases back to AVAILABLE if unpaid when timer hits 00:00
-                        </span>
-                    </h3>
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                        <h3 className="text-sm font-bold text-white">
+                            ⏳ Active Pending Holds (5-Minute TTL Checkout)
+                        </h3>
+
+                        { (pendingBookings.length > 0 || heldCount > 0) && onForceExpireHolds && (
+                            <button
+                                onClick={onForceExpireHolds}
+                                className="px-3 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-slate-950 border border-amber-500/40 text-[11px] font-bold transition cursor-pointer"
+                            >
+                                ⏩ Simulate 5-Min Timeout Now
+                            </button>
+                        )}
+                    </div>
+
                     {pendingBookings.length === 0 ? (
                         <p className="text-xs text-slate-500 bg-slate-950/60 border border-slate-800/80 rounded-lg p-3">
                             No active holds right now. Select available seats above to lock them for 5 minutes.
