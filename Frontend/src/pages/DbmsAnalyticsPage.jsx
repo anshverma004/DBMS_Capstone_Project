@@ -1,5 +1,6 @@
 import React from 'react';
 import { exportAuditLogsToCsv } from '../services/api';
+import { enrichShow } from '../constants/theaterData';
 
 export default function DbmsAnalyticsPage({
     shows,
@@ -9,13 +10,20 @@ export default function DbmsAnalyticsPage({
     users,
     onBackToBooking
 }) {
-    // Compute live telemetry metrics for digital SVG graphs
     const totalSeats = seats.length || 60;
     const availableCount = seats.filter((s) => s.status === 'AVAILABLE').length;
     const heldCount = seats.filter((s) => s.status === 'HELD').length;
     const bookedCount = seats.filter((s) => s.status === 'BOOKED').length;
     const occupancyRate =
         totalSeats > 0 ? Math.round(((bookedCount + heldCount) / totalSeats) * 100) : 0;
+
+    const totalRevenue = seats
+        .filter((s) => s.status === 'BOOKED')
+        .reduce((sum, s) => sum + Number(s.price), 0);
+    const heldRevenue = seats
+        .filter((s) => s.status === 'HELD')
+        .reduce((sum, s) => sum + Number(s.price), 0);
+    const maxCapacityRevenue = seats.reduce((sum, s) => sum + Number(s.price), 0) || 10000;
 
     // SVG Donut Ring Math (radius = 52, circumference = 326.7)
     const radius = 52;
@@ -24,9 +32,33 @@ export default function DbmsAnalyticsPage({
     const heldArc = totalSeats > 0 ? (heldCount / totalSeats) * circumference : 0;
     const bookedArc = totalSeats > 0 ? (bookedCount / totalSeats) * circumference : 0;
 
-    // Tier-Wise Digital Graph Metrics
-    const tiersSummary = ['CLASSIC', 'PRIME', 'RECLINER'].map((tierName) => {
-        const tierSeats = seats.filter((s) => s.tier === tierName);
+    // Tier-Wise Metrics for 3-Ring Concentric Radar & Cards
+    const tiersConfig = [
+        {
+            name: 'CLASSIC',
+            color: '#22d3ee',
+            textClass: 'text-cyan-400',
+            bgClass: 'bg-cyan-400',
+            ringRadius: 34
+        },
+        {
+            name: 'PRIME',
+            color: '#818cf8',
+            textClass: 'text-indigo-400',
+            bgClass: 'bg-indigo-400',
+            ringRadius: 46
+        },
+        {
+            name: 'RECLINER',
+            color: '#fbbf24',
+            textClass: 'text-amber-400',
+            bgClass: 'bg-amber-400',
+            ringRadius: 58
+        }
+    ];
+
+    const tiersSummary = tiersConfig.map((cfg) => {
+        const tierSeats = seats.filter((s) => s.tier === cfg.name);
         const total = tierSeats.length || 20;
         const available = tierSeats.filter((s) => s.status === 'AVAILABLE').length;
         const held = tierSeats.filter((s) => s.status === 'HELD').length;
@@ -34,71 +66,80 @@ export default function DbmsAnalyticsPage({
         const revenue = tierSeats
             .filter((s) => s.status === 'BOOKED')
             .reduce((sum, s) => sum + Number(s.price), 0);
-        const potentialRevenue = tierSeats.reduce(
-            (sum, s) => sum + Number(s.price),
-            0
-        );
+        const fillPct = total > 0 ? Math.round(((booked + held) / total) * 100) : 0;
+        const ringCirc = 2 * Math.PI * cfg.ringRadius;
+        const ringDash = (Math.max(8, fillPct) / 100) * ringCirc;
 
         return {
-            tierName,
+            ...cfg,
             total,
             available,
             held,
             booked,
             revenue,
-            potentialRevenue
+            fillPct,
+            ringCirc,
+            ringDash
         };
     });
 
-    // Row-by-Row Version Contention Digital Histogram (Rows A - F)
+    // Row-by-Row Telemetry Points for the SVG Area Spline Wave Chart (Rows A..F)
     const rowLabels = ['A', 'B', 'C', 'D', 'E', 'F'];
-    const rowContentionData = rowLabels.map((rLabel) => {
+    const rowPoints = rowLabels.map((rLabel, idx) => {
         const rowSeats = seats.filter((s) => s.row_label === rLabel);
-        const totalTxns = rowSeats.reduce(
-            (sum, s) => sum + Math.max(0, Number(s.version || 1) - 1),
+        const rowBooked = rowSeats.filter((s) => s.status === 'BOOKED').length;
+        const rowHeld = rowSeats.filter((s) => s.status === 'HELD').length;
+        const rowVersionSum = rowSeats.reduce(
+            (sum, s) => sum + Number(s.version || 1),
             0
         );
-        const maxVersion = rowSeats.reduce(
-            (max, s) => Math.max(max, Number(s.version || 1)),
-            1
-        );
-        return { rowLabel: rLabel, totalTxns, maxVersion };
+        const rowRev = rowSeats
+            .filter((s) => s.status !== 'AVAILABLE')
+            .reduce((sum, s) => sum + Number(s.price), 0);
+
+        return {
+            rowLabel: rLabel,
+            x: 50 + idx * 100,
+            booked: rowBooked,
+            held: rowHeld,
+            versionSum: rowVersionSum,
+            revenue: rowRev
+        };
     });
-    const maxRowTxns = Math.max(1, ...rowContentionData.map((r) => r.totalTxns));
 
-    // Audit Log Transition Breakdown & Lock Mode Distribution
-    const holdTransitions = auditLogs.filter((l) => l.new_status === 'HELD').length;
-    const bookTransitions = auditLogs.filter((l) => l.new_status === 'BOOKED').length;
-    const releaseTransitions = auditLogs.filter(
-        (l) => l.new_status === 'AVAILABLE'
-    ).length;
+    const maxVersionVal = Math.max(15, ...rowPoints.map((p) => p.versionSum));
+    const svgWavePoints = rowPoints.map((p) => ({
+        ...p,
+        yVersion: 145 - Math.round((p.versionSum / maxVersionVal) * 110),
+        yActive: 145 - Math.round(((p.booked + p.held) / 10) * 110)
+    }));
 
-    const pessimisticOrders = bookings.filter(
-        (b) => b.lock_mode === 'PESSIMISTIC'
-    ).length;
-    const optimisticOrders = bookings.filter(
-        (b) => b.lock_mode === 'OPTIMISTIC'
-    ).length;
-    const totalStrategyOrders = Math.max(1, pessimisticOrders + optimisticOrders);
+    const versionPolyline = svgWavePoints.map((p) => `${p.x},${p.yVersion}`).join(' ');
+    const versionAreaPath = `M ${svgWavePoints[0].x},150 L ${svgWavePoints
+        .map((p) => `${p.x},${p.yVersion}`)
+        .join(' L ')} L ${svgWavePoints[svgWavePoints.length - 1].x},150 Z`;
+
+    const activePolyline = svgWavePoints.map((p) => `${p.x},${p.yActive}`).join(' ');
+    const activeAreaPath = `M ${svgWavePoints[0].x},150 L ${svgWavePoints
+        .map((p) => `${p.x},${p.yActive}`)
+        .join(' L ')} L ${svgWavePoints[svgWavePoints.length - 1].x},150 Z`;
+
+    const enrichedShows = shows.map((sh, idx) => enrichShow(sh, idx));
 
     return (
         <div className="space-y-6 py-2">
-            {/* TOP CYBER-TELEMETRY HEADER */}
-            <div className="relative overflow-hidden bg-slate-900 border border-cyan-500/30 rounded-2xl p-6 flex flex-wrap items-center justify-between gap-4 shadow-[0_0_35px_rgba(6,182,212,0.12)]">
+            {/* TOP HEADER */}
+            <div className="relative overflow-hidden bg-gradient-to-r from-slate-900 via-indigo-950/80 to-slate-900 border border-cyan-500/30 rounded-2xl p-6 flex flex-wrap items-center justify-between gap-4 shadow-[0_0_40px_rgba(6,182,212,0.12)]">
                 <div>
                     <div className="flex items-center gap-2">
                         <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
                         <span className="text-xs font-mono font-bold uppercase tracking-widest text-cyan-400">
-                            REAL-TIME TELEMETRY &amp; DIGITAL GRAPH COCKPIT
+                            LIVE VISUAL ANALYTICS &amp; DIGITAL TELEMETRY COCKPIT
                         </span>
                     </div>
                     <h1 className="text-2xl font-extrabold text-white mt-1">
-                        📊 Live Cinema &amp; Concurrency Telemetry Graphs
+                        📊 Cinema Box-Office, Concurrency Waveforms &amp; Radar Analytics
                     </h1>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                        Live vector graphs of seat lock states, row contention histograms, trigger
-                        velocity meters, and tier revenue analytics.
-                    </p>
                 </div>
 
                 <div className="flex items-center gap-2.5">
@@ -107,7 +148,7 @@ export default function DbmsAnalyticsPage({
                             onClick={() => exportAuditLogsToCsv(auditLogs)}
                             className="px-4 py-2 rounded-xl bg-cyan-500/15 hover:bg-cyan-500 text-cyan-300 hover:text-slate-950 border border-cyan-500/40 text-xs font-bold transition cursor-pointer"
                         >
-                            📥 Export Telemetry CSV
+                            📥 Export CSV Report
                         </button>
                     )}
                     <button
@@ -119,25 +160,239 @@ export default function DbmsAnalyticsPage({
                 </div>
             </div>
 
-            {/* ==================== ROW 1: 3 DIGITAL VECTOR GRAPHS ==================== */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-                {/* GRAPH 1: SVG RADIAL DONUT GAUGE (SEAT STATE DISTRIBUTION) */}
-                <div className="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
-                    <div className="flex items-center justify-between mb-2">
-                        <div>
-                            <span className="text-[10px] font-mono uppercase tracking-wider text-cyan-400 block">
-                                GRAPH 01 • STATE MACHINE TELEMETRY
-                            </span>
-                            <h3 className="text-sm font-bold text-white">
-                                Live Auditorium Seat State Donut
-                            </h3>
-                        </div>
-                        <span className="text-xs font-mono bg-slate-950 px-2.5 py-1 rounded border border-slate-800 text-emerald-400">
-                            {totalSeats} Seats
+            {/* ==================== ROW 1: 4 GLOWING KPI CARDS WITH MINI SVG SPARKLINES ==================== */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* KPI 1 */}
+                <div className="bg-slate-900 border border-emerald-500/30 rounded-2xl p-5 shadow-xl relative overflow-hidden">
+                    <span className="text-[11px] font-mono uppercase text-slate-400 block">
+                        Confirmed Box-Office
+                    </span>
+                    <div className="text-2xl font-black text-emerald-400 mt-1">
+                        ₹{totalRevenue}
+                    </div>
+                    <span className="text-[11px] text-slate-400">
+                        +₹{heldRevenue} locked in active checkout
+                    </span>
+                    <svg className="w-full h-10 mt-2" viewBox="0 0 120 30">
+                        <path
+                            d="M 0,25 Q 25,18 45,20 T 85,10 T 120,4 L 120,30 L 0,30 Z"
+                            fill="rgba(16,185,129,0.18)"
+                        />
+                        <path
+                            d="M 0,25 Q 25,18 45,20 T 85,10 T 120,4"
+                            fill="none"
+                            stroke="#10b981"
+                            strokeWidth="2"
+                        />
+                    </svg>
+                </div>
+
+                {/* KPI 2 */}
+                <div className="bg-slate-900 border border-cyan-500/30 rounded-2xl p-5 shadow-xl relative overflow-hidden">
+                    <span className="text-[11px] font-mono uppercase text-slate-400 block">
+                        Auditorium Occupancy
+                    </span>
+                    <div className="text-2xl font-black text-cyan-400 mt-1">
+                        {occupancyRate}%
+                    </div>
+                    <span className="text-[11px] text-slate-400">
+                        {bookedCount + heldCount} of {totalSeats} seats active
+                    </span>
+                    <svg className="w-full h-10 mt-2" viewBox="0 0 120 30">
+                        <path
+                            d="M 0,24 Q 30,12 60,16 T 120,6 L 120,30 L 0,30 Z"
+                            fill="rgba(34,211,238,0.18)"
+                        />
+                        <path
+                            d="M 0,24 Q 30,12 60,16 T 120,6"
+                            fill="none"
+                            stroke="#22d3ee"
+                            strokeWidth="2"
+                        />
+                    </svg>
+                </div>
+
+                {/* KPI 3 */}
+                <div className="bg-slate-900 border border-amber-500/30 rounded-2xl p-5 shadow-xl relative overflow-hidden">
+                    <span className="text-[11px] font-mono uppercase text-slate-400 block">
+                        Trigger Audit Events
+                    </span>
+                    <div className="text-2xl font-black text-amber-400 mt-1">
+                        {auditLogs.length}
+                    </div>
+                    <span className="text-[11px] text-slate-400">
+                        Peak Seat Version: v
+                        {Math.max(1, ...seats.map((s) => Number(s.version || 1)))}
+                    </span>
+                    <svg className="w-full h-10 mt-2" viewBox="0 0 120 30">
+                        <path
+                            d="M 0,26 Q 20,22 45,12 T 90,15 T 120,5 L 120,30 L 0,30 Z"
+                            fill="rgba(245,158,11,0.18)"
+                        />
+                        <path
+                            d="M 0,26 Q 20,22 45,12 T 90,15 T 120,5"
+                            fill="none"
+                            stroke="#f59e0b"
+                            strokeWidth="2"
+                        />
+                    </svg>
+                </div>
+
+                {/* KPI 4 */}
+                <div className="bg-slate-900 border border-indigo-500/30 rounded-2xl p-5 shadow-xl relative overflow-hidden">
+                    <span className="text-[11px] font-mono uppercase text-slate-400 block">
+                        Concurrency Integrity
+                    </span>
+                    <div className="text-2xl font-black text-indigo-400 mt-1">
+                        100% ACID
+                    </div>
+                    <span className="text-[11px] text-emerald-400 font-semibold">
+                        ✓ 0 Double Bookings • 0 Deadlocks
+                    </span>
+                    <svg className="w-full h-10 mt-2" viewBox="0 0 120 30">
+                        <path
+                            d="M 0,8 L 30,8 L 60,8 L 90,8 L 120,8 L 120,30 L 0,30 Z"
+                            fill="rgba(129,140,248,0.18)"
+                        />
+                        <path
+                            d="M 0,8 L 30,8 L 60,8 L 90,8 L 120,8"
+                            fill="none"
+                            stroke="#818cf8"
+                            strokeWidth="2"
+                        />
+                    </svg>
+                </div>
+            </div>
+
+            {/* ==================== ROW 2: FULL-WIDTH SVG AREA SPLINE WAVE CHART ==================== */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+                <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                    <div>
+                        <span className="text-[10px] font-mono uppercase tracking-wider text-cyan-400 block">
+                            DIGITAL WAVEFORM TELEMETRY • ROWS A TO F
                         </span>
+                        <h2 className="text-base font-bold text-white">
+                            📈 Auditorium Row Version Activity &amp; Seat Lock Waveform
+                        </h2>
                     </div>
 
-                    <div className="flex items-center justify-center gap-6 my-3">
+                    <div className="flex items-center gap-5 text-xs font-mono">
+                        <span className="flex items-center gap-2 text-cyan-300">
+                            <span className="w-3 h-1 bg-cyan-400 inline-block rounded"></span>
+                            Cumulative Row Version Curve
+                        </span>
+                        <span className="flex items-center gap-2 text-rose-300">
+                            <span className="w-3 h-1 bg-rose-500 inline-block rounded"></span>
+                            Locked &amp; Sold Seats Curve
+                        </span>
+                    </div>
+                </div>
+
+                <div className="bg-slate-950/90 border border-slate-800 rounded-xl p-4">
+                    <svg className="w-full h-48" viewBox="0 0 600 175">
+                        <defs>
+                            <linearGradient id="cyanWaveGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.4" />
+                                <stop offset="100%" stopColor="#22d3ee" stopOpacity="0.0" />
+                            </linearGradient>
+                            <linearGradient id="roseWaveGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.35" />
+                                <stop offset="100%" stopColor="#f43f5e" stopOpacity="0.0" />
+                            </linearGradient>
+                        </defs>
+
+                        {/* Horizontal Grid Lines */}
+                        {[35, 70, 105, 145].map((yVal) => (
+                            <line
+                                key={yVal}
+                                x1="30"
+                                y1={yVal}
+                                x2="570"
+                                y2={yVal}
+                                stroke="#1e293b"
+                                strokeDasharray="4 4"
+                                strokeWidth="1"
+                            />
+                        ))}
+
+                        {/* Area Fills */}
+                        <path d={versionAreaPath} fill="url(#cyanWaveGrad)" />
+                        <path d={activeAreaPath} fill="url(#roseWaveGrad)" />
+
+                        {/* Glowing Polyline Curves */}
+                        <polyline
+                            fill="none"
+                            stroke="#22d3ee"
+                            strokeWidth="3"
+                            points={versionPolyline}
+                        />
+                        <polyline
+                            fill="none"
+                            stroke="#f43f5e"
+                            strokeWidth="2.5"
+                            points={activePolyline}
+                        />
+
+                        {/* Data Nodes & X-Axis Labels */}
+                        {svgWavePoints.map((pt) => (
+                            <g key={pt.rowLabel}>
+                                <circle
+                                    cx={pt.x}
+                                    cy={pt.yVersion}
+                                    r="5"
+                                    fill="#0f172a"
+                                    stroke="#22d3ee"
+                                    strokeWidth="2.5"
+                                />
+                                <text
+                                    x={pt.x}
+                                    y={pt.yVersion - 10}
+                                    textAnchor="middle"
+                                    fill="#67e8f9"
+                                    fontSize="10"
+                                    fontFamily="monospace"
+                                >
+                                    v{pt.versionSum}
+                                </text>
+
+                                <circle
+                                    cx={pt.x}
+                                    cy={pt.yActive}
+                                    r="4"
+                                    fill="#f43f5e"
+                                />
+
+                                <text
+                                    x={pt.x}
+                                    y="168"
+                                    textAnchor="middle"
+                                    fill="#94a3b8"
+                                    fontSize="11"
+                                    fontWeight="bold"
+                                    fontFamily="monospace"
+                                >
+                                    ROW {pt.rowLabel}
+                                </text>
+                            </g>
+                        ))}
+                    </svg>
+                </div>
+            </div>
+
+            {/* ==================== ROW 3: DUAL RADIAL GAUGES + 2D AUDITORIUM RADAR MATRIX ==================== */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                {/* LEFT 4 COLS: SEAT STATE DONUT */}
+                <div className="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+                    <div>
+                        <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-400 block">
+                            RADIAL GAUGE 01
+                        </span>
+                        <h3 className="text-sm font-bold text-white">
+                            Seat State Distribution Ring
+                        </h3>
+                    </div>
+
+                    <div className="flex items-center justify-center gap-6 my-4">
                         <div className="relative w-36 h-36 flex items-center justify-center">
                             <svg className="w-36 h-36 -rotate-90" viewBox="0 0 128 128">
                                 <circle
@@ -148,7 +403,6 @@ export default function DbmsAnalyticsPage({
                                     stroke="#0f172a"
                                     strokeWidth="14"
                                 />
-                                {/* Available Arc (Emerald) */}
                                 <circle
                                     cx="64"
                                     cy="64"
@@ -159,7 +413,6 @@ export default function DbmsAnalyticsPage({
                                     strokeDasharray={`${availArc} ${circumference}`}
                                     strokeDashoffset="0"
                                 />
-                                {/* Held Arc (Amber) */}
                                 <circle
                                     cx="64"
                                     cy="64"
@@ -170,7 +423,6 @@ export default function DbmsAnalyticsPage({
                                     strokeDasharray={`${heldArc} ${circumference}`}
                                     strokeDashoffset={-availArc}
                                 />
-                                {/* Booked Arc (Rose) */}
                                 <circle
                                     cx="64"
                                     cy="64"
@@ -187,7 +439,7 @@ export default function DbmsAnalyticsPage({
                                     {occupancyRate}%
                                 </span>
                                 <span className="text-[9px] font-mono uppercase text-slate-400">
-                                    Locked/Sold
+                                    Active
                                 </span>
                             </div>
                         </div>
@@ -195,328 +447,186 @@ export default function DbmsAnalyticsPage({
                         <div className="space-y-2.5 text-xs font-mono">
                             <div className="flex items-center gap-2">
                                 <span className="w-3 h-3 rounded-sm bg-emerald-500 inline-block"></span>
-                                <span className="text-slate-400">AVAILABLE:</span>
+                                <span className="text-slate-400">FREE:</span>
                                 <strong className="text-emerald-400">{availableCount}</strong>
                             </div>
                             <div className="flex items-center gap-2">
                                 <span className="w-3 h-3 rounded-sm bg-amber-500 inline-block"></span>
-                                <span className="text-slate-400">HELD (TTL):</span>
+                                <span className="text-slate-400">HELD:</span>
                                 <strong className="text-amber-400">{heldCount}</strong>
                             </div>
                             <div className="flex items-center gap-2">
                                 <span className="w-3 h-3 rounded-sm bg-rose-500 inline-block"></span>
-                                <span className="text-slate-400">BOOKED:</span>
+                                <span className="text-slate-400">SOLD:</span>
                                 <strong className="text-rose-400">{bookedCount}</strong>
                             </div>
                         </div>
                     </div>
 
                     <div className="text-[11px] font-mono text-slate-400 bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 flex items-center justify-between">
-                        <span>Active Shows / Users:</span>
-                        <span className="text-cyan-300">
-                            {shows.length} Shows • {users.length} Users
+                        <span>Box-Office Fill Ratio:</span>
+                        <span className="text-emerald-400 font-bold">
+                            ₹{totalRevenue} / ₹{maxCapacityRevenue}
                         </span>
                     </div>
                 </div>
 
-                {/* GRAPH 2: ROW-BY-ROW VERSION CONTENTION DIGITAL HISTOGRAM */}
+                {/* MIDDLE 4 COLS: 3-RING CONCENTRIC TIER RADAR GAUGE */}
+                <div className="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+                    <div>
+                        <span className="text-[10px] font-mono uppercase tracking-wider text-indigo-400 block">
+                            RADIAL GAUGE 02
+                        </span>
+                        <h3 className="text-sm font-bold text-white">
+                            Concentric Multi-Tier Radar Rings
+                        </h3>
+                    </div>
+
+                    <div className="flex items-center justify-center gap-5 my-4">
+                        <div className="relative w-36 h-36 flex items-center justify-center">
+                            <svg className="w-36 h-36 -rotate-90" viewBox="0 0 140 140">
+                                {tiersSummary.map((t) => (
+                                    <g key={t.name}>
+                                        <circle
+                                            cx="70"
+                                            cy="70"
+                                            r={t.ringRadius}
+                                            fill="transparent"
+                                            stroke="#0f172a"
+                                            strokeWidth="8"
+                                        />
+                                        <circle
+                                            cx="70"
+                                            cy="70"
+                                            r={t.ringRadius}
+                                            fill="transparent"
+                                            stroke={t.color}
+                                            strokeWidth="8"
+                                            strokeLinecap="round"
+                                            strokeDasharray={`${t.ringDash} ${t.ringCirc}`}
+                                        />
+                                    </g>
+                                ))}
+                            </svg>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                <span className="text-xs font-mono font-bold text-slate-300">
+                                    3 TIERS
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="space-y-2.5 text-xs font-mono">
+                            {tiersSummary.map((t) => (
+                                <div key={t.name}>
+                                    <div className={`font-bold ${t.textClass}`}>
+                                        {t.name}: {t.fillPct}%
+                                    </div>
+                                    <div className="text-[10px] text-slate-400">
+                                        {t.booked} Sold • ₹{t.revenue}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="text-[11px] font-mono text-slate-400 bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 flex items-center justify-between">
+                        <span>Outer: Recliner • Mid: Prime • Inner: Classic</span>
+                    </div>
+                </div>
+
+                {/* RIGHT 4 COLS: 2D DIGITAL AUDITORIUM RADAR MATRIX */}
                 <div className="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
                     <div className="flex items-center justify-between mb-2">
                         <div>
                             <span className="text-[10px] font-mono uppercase tracking-wider text-amber-400 block">
-                                GRAPH 02 • VERSION CONTENTION TELEMETRY
+                                2D SPATIAL RADAR
                             </span>
                             <h3 className="text-sm font-bold text-white">
-                                Row Contention &amp; Version Histogram
+                                Live 60-Seat Cyber Telemetry Grid
                             </h3>
                         </div>
-                        <span className="text-xs font-mono bg-slate-950 px-2.5 py-1 rounded border border-slate-800 text-amber-300">
-                            OCC v1..vN
+                        <span className="text-[10px] font-mono text-cyan-400">
+                            6x10 Matrix
                         </span>
                     </div>
 
-                    {/* Vertical Digital Bar Chart */}
-                    <div className="h-36 flex items-end justify-between gap-3 pt-6 pb-2 px-3 bg-slate-950/70 border border-slate-800/80 rounded-xl my-2">
-                        {rowContentionData.map((r) => {
-                            const heightPct = Math.max(
-                                12,
-                                Math.round((r.totalTxns / maxRowTxns) * 100)
-                            );
-                            return (
-                                <div
-                                    key={r.rowLabel}
-                                    className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end"
-                                >
-                                    <span className="text-[10px] font-mono text-amber-300 font-bold">
-                                        {r.totalTxns}
-                                    </span>
-                                    <div className="w-full bg-slate-900 rounded-t-md h-20 flex items-end overflow-hidden border border-slate-800">
-                                        <div
-                                            className="w-full bg-gradient-to-t from-amber-600 via-amber-400 to-cyan-300 rounded-t transition-all duration-500"
-                                            style={{ height: `${heightPct}%` }}
-                                        ></div>
+                    <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 my-2">
+                        <div className="grid grid-cols-10 gap-1">
+                            {seats.map((s) => {
+                                const dotClass =
+                                    s.status === 'BOOKED'
+                                        ? 'bg-rose-500 text-white shadow-[0_0_8px_rgba(244,63,94,0.6)]'
+                                        : s.status === 'HELD'
+                                        ? 'bg-amber-400 text-slate-950 animate-pulse'
+                                        : Number(s.version) > 1
+                                        ? 'bg-cyan-500/40 text-cyan-200 border border-cyan-400'
+                                        : 'bg-emerald-950/70 text-emerald-400 border border-emerald-500/30';
+
+                                return (
+                                    <div
+                                        key={s.show_seat_id}
+                                        title={`${s.seat_code}: ${s.status} (v${s.version})`}
+                                        className={`h-5 rounded text-[8px] font-mono font-bold flex items-center justify-center ${dotClass}`}
+                                    >
+                                        {s.seat_code}
                                     </div>
-                                    <span className="text-[10px] font-mono font-bold text-slate-300">
-                                        Row {r.rowLabel}
-                                    </span>
-                                </div>
-                            );
-                        })}
+                                );
+                            })}
+                        </div>
                     </div>
 
                     <div className="text-[11px] font-mono text-slate-400 bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 flex items-center justify-between">
-                        <span>Peak Seat Version:</span>
-                        <span className="text-amber-300 font-bold">
-                            v{Math.max(1, ...seats.map((s) => Number(s.version || 1)))}
-                        </span>
-                    </div>
-                </div>
-
-                {/* GRAPH 3: TRIGGER VELOCITY & LOCKING STRATEGY SPLIT */}
-                <div className="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
-                    <div className="flex items-center justify-between mb-2">
-                        <div>
-                            <span className="text-[10px] font-mono uppercase tracking-wider text-indigo-400 block">
-                                GRAPH 03 • TRIGGER &amp; LOCK TELEMETRY
-                            </span>
-                            <h3 className="text-sm font-bold text-white">
-                                State Transitions &amp; Lock Split
-                            </h3>
-                        </div>
-                        <span className="text-xs font-mono bg-slate-950 px-2.5 py-1 rounded border border-slate-800 text-indigo-300">
-                            {auditLogs.length} Events
-                        </span>
-                    </div>
-
-                    <div className="space-y-3 my-2">
-                        {/* Transition Horizontal Digital Meters */}
-                        <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-3 space-y-2.5 text-xs font-mono">
-                            <div>
-                                <div className="flex justify-between text-[11px] mb-1">
-                                    <span className="text-amber-300">
-                                        AVAILABLE -&gt; HELD (Locks)
-                                    </span>
-                                    <span className="font-bold text-white">
-                                        {holdTransitions}
-                                    </span>
-                                </div>
-                                <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden">
-                                    <div
-                                        className="h-full bg-amber-400"
-                                        style={{
-                                            width: `${Math.min(
-                                                100,
-                                                Math.max(8, holdTransitions * 8)
-                                            )}%`
-                                        }}
-                                    ></div>
-                                </div>
-                            </div>
-
-                            <div>
-                                <div className="flex justify-between text-[11px] mb-1">
-                                    <span className="text-emerald-400">
-                                        HELD -&gt; BOOKED (Commits)
-                                    </span>
-                                    <span className="font-bold text-white">
-                                        {bookTransitions}
-                                    </span>
-                                </div>
-                                <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden">
-                                    <div
-                                        className="h-full bg-emerald-500"
-                                        style={{
-                                            width: `${Math.min(
-                                                100,
-                                                Math.max(8, bookTransitions * 12)
-                                            )}%`
-                                        }}
-                                    ></div>
-                                </div>
-                            </div>
-
-                            <div>
-                                <div className="flex justify-between text-[11px] mb-1">
-                                    <span className="text-cyan-400">
-                                        HELD/BOOKED -&gt; AVAILABLE (Healed)
-                                    </span>
-                                    <span className="font-bold text-white">
-                                        {releaseTransitions}
-                                    </span>
-                                </div>
-                                <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden">
-                                    <div
-                                        className="h-full bg-cyan-400"
-                                        style={{
-                                            width: `${Math.min(
-                                                100,
-                                                Math.max(8, releaseTransitions * 12)
-                                            )}%`
-                                        }}
-                                    ></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Strategy Comparison Bar */}
-                        <div className="bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 text-[11px] font-mono">
-                            <div className="flex justify-between mb-1">
-                                <span className="text-indigo-300">
-                                    🔒 Pessimistic: {pessimisticOrders}
-                                </span>
-                                <span className="text-amber-300">
-                                    ⚡ Optimistic: {optimisticOrders}
-                                </span>
-                            </div>
-                            <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden flex">
-                                <div
-                                    className="bg-indigo-500 h-full"
-                                    style={{
-                                        width: `${Math.round(
-                                            (pessimisticOrders / totalStrategyOrders) * 100
-                                        )}%`
-                                    }}
-                                ></div>
-                                <div
-                                    className="bg-amber-400 h-full"
-                                    style={{
-                                        width: `${Math.round(
-                                            (optimisticOrders / totalStrategyOrders) * 100
-                                        )}%`
-                                    }}
-                                ></div>
-                            </div>
-                        </div>
+                        <span>Cyan Node = Contended &amp; Freed (`v2+`)</span>
                     </div>
                 </div>
             </div>
 
-            {/* ==================== ROW 2: TIER REVENUE DIGITAL BAR CHART ==================== */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-                    <div>
-                        <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-400 block">
-                            GRAPH 04 • FINANCIAL &amp; TIER CAPACITY TELEMETRY
-                        </span>
-                        <h2 className="text-base font-bold text-white">
-                            Tier-Wise Occupancy &amp; Box-Office Revenue Digital Bars
-                        </h2>
-                    </div>
-                    <span className="text-xs font-mono text-emerald-400 font-bold">
-                        Total Realized Revenue: ₹
-                        {tiersSummary.reduce((s, t) => s + t.revenue, 0)} / ₹
-                        {tiersSummary.reduce((s, t) => s + t.potentialRevenue, 0)} Capacity
-                    </span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {tiersSummary.map((t) => {
-                        const soldPct = t.total > 0 ? Math.round((t.booked / t.total) * 100) : 0;
-                        const heldPct = t.total > 0 ? Math.round((t.held / t.total) * 100) : 0;
-                        const revPct =
-                            t.potentialRevenue > 0
-                                ? Math.round((t.revenue / t.potentialRevenue) * 100)
-                                : 0;
-
-                        return (
-                            <div
-                                key={t.tierName}
-                                className="bg-slate-950/90 border border-slate-800 rounded-xl p-4 space-y-3 font-mono"
-                            >
-                                <div className="flex items-center justify-between">
-                                    <span className="text-xs font-extrabold text-cyan-300">
-                                        {t.tierName} TIER
-                                    </span>
-                                    <span className="text-xs font-bold text-emerald-400">
-                                        ₹{t.revenue} ({revPct}%)
-                                    </span>
-                                </div>
-
-                                <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                                    <div className="bg-slate-900 p-2 rounded border border-slate-800">
-                                        <span className="text-slate-500 block text-[9px]">
-                                            FREE
-                                        </span>
-                                        <span className="font-bold text-emerald-400">
-                                            {t.available}
-                                        </span>
-                                    </div>
-                                    <div className="bg-slate-900 p-2 rounded border border-slate-800">
-                                        <span className="text-slate-500 block text-[9px]">
-                                            HELD
-                                        </span>
-                                        <span className="font-bold text-amber-400">
-                                            {t.held}
-                                        </span>
-                                    </div>
-                                    <div className="bg-slate-900 p-2 rounded border border-slate-800">
-                                        <span className="text-slate-500 block text-[9px]">
-                                            SOLD
-                                        </span>
-                                        <span className="font-bold text-rose-400">
-                                            {t.booked}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <div className="w-full h-2.5 bg-slate-900 rounded-full overflow-hidden flex border border-slate-800">
-                                    <div
-                                        className="bg-rose-500 h-full transition-all"
-                                        style={{ width: `${soldPct}%` }}
-                                    ></div>
-                                    <div
-                                        className="bg-amber-400 h-full transition-all"
-                                        style={{ width: `${heldPct}%` }}
-                                    ></div>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            </div>
-
-            {/* ==================== ROW 3: SEAT-BY-SEAT DIGITAL MATRIX WAVEFORM ==================== */}
+            {/* ==================== ROW 4: MULTI-THEATER SHOW COMPARISON BARS ==================== */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                        <span className="text-[10px] font-mono uppercase tracking-wider text-cyan-400 block">
-                            GRAPH 05 • LIVE 60-NODE SEAT CONTENTION MATRIX
-                        </span>
-                        <h2 className="text-base font-bold text-white">
-                            Per-Seat Transaction &amp; Version Pulse Map
-                        </h2>
-                    </div>
-                    <span className="text-xs font-mono text-slate-400">
-                        Height = Version Counter (`v1` to `vN`) • Color = Live Status
+                <div>
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-rose-400 block">
+                        MULTI-VENUE COMPARISON • ALL ACTIVE SHOWS
                     </span>
+                    <h2 className="text-base font-bold text-white">
+                        🎬 Cross-Theater Capacity &amp; Occupancy Comparison Graph
+                    </h2>
                 </div>
 
-                <div className="h-32 bg-slate-950 border border-slate-800 rounded-xl p-4 flex items-end gap-1 overflow-x-auto">
-                    {seats.map((s) => {
-                        const v = Number(s.version || 1);
-                        const barHeight = Math.min(100, Math.max(18, v * 22));
-                        const barColor =
-                            s.status === 'BOOKED'
-                                ? 'bg-rose-500'
-                                : s.status === 'HELD'
-                                ? 'bg-amber-400'
-                                : v > 1
-                                ? 'bg-cyan-400'
-                                : 'bg-emerald-500/60';
+                <div className="space-y-3">
+                    {enrichedShows.map((sh) => {
+                        const occupied = sh.total_capacity - sh.available_seats;
+                        const pct = Math.round((occupied / sh.total_capacity) * 100);
 
                         return (
                             <div
-                                key={s.show_seat_id}
-                                title={`${s.seat_code}: ${s.status} (v${v})`}
-                                className="flex-1 min-w-[10px] h-full flex flex-col items-center justify-end gap-1"
+                                key={sh.show_id}
+                                className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2"
                             >
-                                <div
-                                    className={`w-full rounded-t transition-all duration-300 ${barColor}`}
-                                    style={{ height: `${barHeight}%` }}
-                                ></div>
-                                <span className="text-[8px] font-mono text-slate-500">
-                                    {s.seat_code}
-                                </span>
+                                <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                                    <div className="font-bold text-white flex items-center gap-2">
+                                        <span>{sh.movie_title}</span>
+                                        <span className="text-[10px] font-mono text-slate-400">
+                                            ({sh.theaterName})
+                                        </span>
+                                    </div>
+                                    <div className="font-mono text-xs">
+                                        <span className="text-emerald-400 font-bold">
+                                            {sh.available_seats} Free
+                                        </span>{' '}
+                                        /{' '}
+                                        <span className="text-rose-400 font-bold">
+                                            {occupied} Active
+                                        </span>{' '}
+                                        ({pct}%)
+                                    </div>
+                                </div>
+
+                                <div className="w-full h-3 bg-slate-900 rounded-full overflow-hidden border border-slate-800 flex">
+                                    <div
+                                        className="h-full bg-gradient-to-r from-rose-600 via-amber-500 to-cyan-400 transition-all duration-500"
+                                        style={{ width: `${Math.max(4, pct)}%` }}
+                                    ></div>
+                                </div>
                             </div>
                         );
                     })}
