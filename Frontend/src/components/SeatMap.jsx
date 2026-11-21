@@ -18,7 +18,6 @@ export default function SeatMap({
     onCancelBooking,
     currentShow
 }) {
-    const [preventOrphanGap, setPreventOrphanGap] = useState(true);
     const [tickOffset, setTickOffset] = useState(0);
 
     // Reset tick offset whenever fresh seats/bookings arrive from backend or socket
@@ -54,61 +53,10 @@ export default function SeatMap({
         0
     );
 
-    // Detect if the user's current selection creates a 1-seat isolated "Orphan Gap" in any row
-    function findOrphanGapSeat() {
-        const rowsMap = {};
-        for (const s of seats) {
-            if (!rowsMap[s.row_label]) rowsMap[s.row_label] = [];
-            rowsMap[s.row_label].push(s);
-        }
-
-        for (const rowLabel of Object.keys(rowsMap)) {
-            const rowSeats = rowsMap[rowLabel].sort((a, b) => a.seat_number - b.seat_number);
-            const hasSelectionInRow = rowSeats.some((s) =>
-                selectedSeatIds.includes(s.show_seat_id)
-            );
-            if (!hasSelectionInRow) continue;
-
-            // Check each half of the row (Seats 1-5 left of aisle, Seats 6-10 right of aisle)
-            const blocks = [
-                rowSeats.filter((s) => s.seat_number <= 5),
-                rowSeats.filter((s) => s.seat_number > 5)
-            ];
-
-            for (const block of blocks) {
-                for (let i = 0; i < block.length; i++) {
-                    const curr = block[i];
-                    const isCurrOccupied =
-                        curr.status !== 'AVAILABLE' ||
-                        selectedSeatIds.includes(curr.show_seat_id);
-
-                    if (!isCurrOccupied) {
-                        const leftOccupied =
-                            i === 0 ||
-                            block[i - 1].status !== 'AVAILABLE' ||
-                            selectedSeatIds.includes(block[i - 1].show_seat_id);
-                        const rightOccupied =
-                            i === block.length - 1 ||
-                            block[i + 1].status !== 'AVAILABLE' ||
-                            selectedSeatIds.includes(block[i + 1].show_seat_id);
-
-                        if (leftOccupied && rightOccupied) {
-                            return curr.seat_code;
-                        }
-                    }
-                }
-            }
-        }
-        return null;
-    }
-
-    const orphanGapSeatCode = preventOrphanGap ? findOrphanGapSeat() : null;
-
     // Smart Best-Available Contiguous Seats Auto-Finder
     function handleAutoPickBestSeats(count) {
         if (!onSetSelectedSeats) return;
 
-        // Prefer PRIME (C, D), then RECLINER (E, F), then CLASSIC (A, B)
         const preferredRows = ['C', 'D', 'E', 'F', 'B', 'A'];
         const rowsMap = {};
         for (const s of seats) {
@@ -122,7 +70,6 @@ export default function SeatMap({
             );
             if (rowSeats.length === 0) continue;
 
-            // Search contiguous windows within left block (1..5) or right block (6..10)
             const blocks = [
                 rowSeats.filter((s) => s.seat_number <= 5),
                 rowSeats.filter((s) => s.seat_number > 5)
@@ -189,7 +136,7 @@ export default function SeatMap({
             {/* 2. MAIN THEATER AUDITORIUM CARD */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
                 {/* Auditorium Header & Smart Auto-Picker */}
-                <div className="flex flex-wrap items-center justify-between gap-4 pb-4 mb-4 border-b border-slate-800">
+                <div className="flex flex-wrap items-center justify-between gap-4 pb-4 mb-5 border-b border-slate-800">
                     <div>
                         <h3 className="text-base font-bold text-white flex items-center gap-2">
                             🎬 {currentShow?.movie_title || 'Theater Auditorium'}
@@ -202,10 +149,10 @@ export default function SeatMap({
                         </p>
                     </div>
 
-                    {/* Smart Contiguous Seat Auto-Picker + Anti-Gap Toggle */}
+                    {/* Smart Contiguous Seat Auto-Picker */}
                     <div className="flex flex-wrap items-center gap-2">
                         <span className="text-[11px] text-slate-400 font-medium">
-                            ✨ Auto-Pick Best Adjacent:
+                            ✨ Auto-Pick Best Seats:
                         </span>
                         {[2, 3, 4].map((cnt) => (
                             <button
@@ -229,41 +176,11 @@ export default function SeatMap({
                     </div>
                 </div>
 
-                {/* Anti-Single-Seat-Gap Rule Bar (Solves BMS Single-Seat Gap Problem!) */}
-                <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-950/70 border border-slate-800 rounded-xl px-4 py-2.5 mb-5">
-                    <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={preventOrphanGap}
-                            onChange={(e) => setPreventOrphanGap(e.target.checked)}
-                            className="accent-rose-500 rounded cursor-pointer"
-                        />
-                        <span>
-                            <strong>🛡️ Anti-Single-Seat-Gap Protection:</strong> Prevent leaving 1
-                            unsellable isolated seat between bookings
-                        </span>
-                    </label>
-                    <span className="text-[11px] text-emerald-400 font-semibold">
-                        ₹0 Convenience Fee Guaranteed
-                    </span>
-                </div>
-
-                {/* Single-Seat Gap Warning if triggered */}
-                {orphanGapSeatCode && (
-                    <div className="mb-4 px-4 py-3 rounded-xl bg-amber-500/15 border border-amber-500/50 text-amber-200 text-xs flex items-center justify-between">
-                        <span>
-                            ⚠️ <strong>Single-Seat Orphan Gap Detected:</strong> Your current selection
-                            leaves Seat <strong>{orphanGapSeatCode}</strong> isolated alone! Please include{' '}
-                            <strong>{orphanGapSeatCode}</strong> or shift by 1 seat.
-                        </span>
-                    </div>
-                )}
-
                 {/* Curved Cinema Screen Banner */}
                 <div className="mb-6 text-center">
                     <div className="w-4/5 mx-auto h-2.5 rounded-t-full bg-gradient-to-r from-slate-800 via-cyan-400/90 to-slate-800 shadow-[0_8px_25px_rgba(34,211,238,0.3)]"></div>
                     <span className="text-[10px] uppercase tracking-[0.3em] text-slate-500 mt-2 inline-block">
-                        All Eyes This Way • IMAX Laser Screen
+                        All Eyes This Way • Cinema Screen
                     </span>
                 </div>
 
@@ -328,33 +245,28 @@ export default function SeatMap({
                                             key={rowLabel}
                                             className="flex items-center justify-between gap-2"
                                         >
-                                            {/* Left Row Letter */}
                                             <span className="w-5 text-xs font-bold text-slate-500 text-center">
                                                 {rowLabel}
                                             </span>
 
-                                            {/* Left 5 Seats */}
                                             <div className="grid grid-cols-5 gap-1.5 flex-1">
                                                 {leftBlock.map((seat) =>
                                                     renderSeatButton(seat)
                                                 )}
                                             </div>
 
-                                            {/* Center Aisle Walkway */}
                                             <div className="w-4 sm:w-7 flex items-center justify-center">
                                                 <span className="text-[8px] text-slate-600 uppercase rotate-90 tracking-widest select-none">
                                                     AISLE
                                                 </span>
                                             </div>
 
-                                            {/* Right 5 Seats */}
                                             <div className="grid grid-cols-5 gap-1.5 flex-1">
                                                 {rightBlock.map((seat) =>
                                                     renderSeatButton(seat)
                                                 )}
                                             </div>
 
-                                            {/* Right Row Letter */}
                                             <span className="w-5 text-xs font-bold text-slate-500 text-center">
                                                 {rowLabel}
                                             </span>
@@ -373,7 +285,7 @@ export default function SeatMap({
                             Selected Seats ({selectedSeatObjects.length}):{' '}
                             <span className="font-bold text-white">
                                 {selectedSeatObjects.map((s) => s.seat_code).join(', ') ||
-                                    'Click green seats above'}
+                                    'Click any green seat above'}
                             </span>
                         </div>
                         <div className="text-xs text-slate-400 mt-0.5">
@@ -389,9 +301,9 @@ export default function SeatMap({
 
                     <button
                         onClick={onHoldSeats}
-                        disabled={selectedSeatIds.length === 0 || Boolean(orphanGapSeatCode)}
+                        disabled={selectedSeatIds.length === 0}
                         className={`px-5 py-2.5 rounded-xl text-xs font-bold transition ${
-                            selectedSeatIds.length === 0 || Boolean(orphanGapSeatCode)
+                            selectedSeatIds.length === 0
                                 ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
                                 : 'bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/30 cursor-pointer'
                         }`}
@@ -470,7 +382,6 @@ export default function SeatMap({
                                             </div>
                                         </div>
 
-                                        {/* Live TTL Progress Bar */}
                                         <div className="w-full h-1.5 bg-slate-950 rounded-full overflow-hidden">
                                             <div
                                                 className="h-full bg-amber-400 transition-all duration-1000"
