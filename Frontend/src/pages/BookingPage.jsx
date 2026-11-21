@@ -16,6 +16,7 @@ export default function BookingPage({
     onForceExpireHolds,
     auditLogs,
     onSimulateRace,
+    onAutoCompareBothStrategies,
     simulationResult,
     sampleResults,
     onBackToTheaters,
@@ -76,6 +77,7 @@ export default function BookingPage({
                         seats={seats}
                         auditLogs={auditLogs}
                         onSimulateRace={onSimulateRace}
+                        onAutoCompareBothStrategies={onAutoCompareBothStrategies}
                         simulationResult={simulationResult}
                         sampleResults={sampleResults}
                     />

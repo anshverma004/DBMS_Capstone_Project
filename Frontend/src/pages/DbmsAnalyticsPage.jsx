@@ -154,6 +154,70 @@ const LIVE_PRESET_QUERIES = [
     }
 ];
 
+const ER_DIAGRAM_BOXES = [
+    {
+        name: 'movies',
+        color: 'border-blue-500/50 bg-blue-950/25',
+        headerColor: 'bg-blue-600/30 text-blue-200',
+        rel: '1 : N ──► shows',
+        cols: ['🔑 PK movie_id : INT', 'title : VARCHAR(150)', 'genre : VARCHAR(100)', 'duration_mins : INT [>0]']
+    },
+    {
+        name: 'screens',
+        color: 'border-blue-500/50 bg-blue-950/25',
+        headerColor: 'bg-blue-600/30 text-blue-200',
+        rel: '1 : N ──► shows',
+        cols: ['🔑 PK screen_id : INT', 'UK screen_name : VARCHAR', 'total_rows / seats_per_row', 'total_capacity : INT']
+    },
+    {
+        name: 'shows',
+        color: 'border-indigo-500/50 bg-indigo-950/25',
+        headerColor: 'bg-indigo-600/30 text-indigo-200',
+        rel: '1 : N ──► show_seats & bookings',
+        cols: ['🔑 PK show_id : INT', '🔗 FK movie_id, screen_id', 'is_flash_sale : BOOLEAN', 'available_seats : INT']
+    },
+    {
+        name: 'show_seats (CORE LOCK TABLE)',
+        color: 'border-amber-500/70 bg-amber-950/30 ring-1 ring-amber-500/30',
+        headerColor: 'bg-amber-500/30 text-amber-200',
+        rel: '1 : N ──► booking_seats & audit_logs',
+        cols: [
+            '🔑 PK show_seat_id : INT',
+            '🔗 FK show_id, held_by_user_id',
+            'IDX status, held_until (5m TTL)',
+            'version : INT (Optimistic Lock)'
+        ]
+    },
+    {
+        name: 'users',
+        color: 'border-emerald-500/50 bg-emerald-950/25',
+        headerColor: 'bg-emerald-600/30 text-emerald-200',
+        rel: '1 : N ──► bookings & holds',
+        cols: ['🔑 PK user_id : INT', 'full_name : VARCHAR(100)', 'UK email : VARCHAR(150)', 'created_at : TIMESTAMP']
+    },
+    {
+        name: 'bookings',
+        color: 'border-emerald-500/50 bg-emerald-950/25',
+        headerColor: 'bg-emerald-600/30 text-emerald-200',
+        rel: '1 : N ──► booking_seats',
+        cols: ['🔑 PK booking_id : INT', '🔗 FK user_id, show_id', 'booking_status, lock_mode', 'expires_at, confirmed_at']
+    },
+    {
+        name: 'booking_seats (1NF M:N)',
+        color: 'border-pink-500/50 bg-pink-950/25',
+        headerColor: 'bg-pink-600/30 text-pink-200',
+        rel: 'N : 1 ──► bookings & show_seats',
+        cols: ['🔑 PK booking_seat_id : INT', '🔗 FK booking_id [UK1]', '🔗 FK show_seat_id [UK1]', 'price_at_booking : DECIMAL']
+    },
+    {
+        name: 'seat_audit_logs (TRIGGER)',
+        color: 'border-purple-500/50 bg-purple-950/25',
+        headerColor: 'bg-purple-600/30 text-purple-200',
+        rel: 'Populated via AFTER UPDATE Trigger',
+        cols: ['🔑 PK log_id : BIGINT', '🔗 FK show_seat_id : INT', 'old_status -> new_status', 'old_version -> new_version']
+    }
+];
+
 export default function DbmsAnalyticsPage({
     shows,
     seats,
@@ -188,7 +252,6 @@ export default function DbmsAnalyticsPage({
             const res = await runPresetQueryApi(queryKey);
             setQueryOutput(res);
         } catch {
-            // Client fallback computation if cloud backend is still redeploying
             if (queryKey === 'top_contended_seats') {
                 const sorted = [...seats]
                     .sort((a, b) => Number(b.version) - Number(a.version))
@@ -230,11 +293,11 @@ export default function DbmsAnalyticsPage({
                         DBMS Capstone Evaluation &amp; Viva Inspector
                     </span>
                     <h1 className="text-2xl font-extrabold text-white mt-0.5">
-                        📊 Live DBMS Analytics, 3NF Schema &amp; SQL Query Runner
+                        📊 Live DBMS Analytics, 3NF ER Diagram &amp; SQL Query Runner
                     </h1>
                     <p className="text-xs text-slate-400 mt-1">
-                        Execute live SQL queries (`GROUP BY`, `INNER JOIN`, `EXPLAIN`), inspect 3NF
-                        cardinalities, and review viva answers.
+                        Execute live SQL queries (`GROUP BY`, `INNER JOIN`, `EXPLAIN`), inspect the
+                        interactive 3NF ER Diagram, and review viva answers.
                     </p>
                 </div>
 
@@ -306,7 +369,52 @@ export default function DbmsAnalyticsPage({
                 })}
             </div>
 
-            {/* 2. LIVE ACADEMIC SQL QUERY RUNNER (GROUP BY / JOIN / EXPLAIN) */}
+            {/* 2. INTERACTIVE VISUAL 3NF ENTITY-RELATIONSHIP (ER) DIAGRAM */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                        <h2 className="text-base font-bold text-white">
+                            📐 Visual 3NF Entity-Relationship (ER) Schema Map (Crow&apos;s Foot Model)
+                        </h2>
+                        <p className="text-xs text-slate-400">
+                            All 8 normalized MySQL InnoDB tables with Primary Keys, Foreign Keys,
+                            Composite Indexes, and Cardinality connectors
+                        </p>
+                    </div>
+                    <span className="text-[11px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-full">
+                        ✓ 100% 3NF Normalized
+                    </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                    {ER_DIAGRAM_BOXES.map((box) => (
+                        <div
+                            key={box.name}
+                            className={`rounded-xl border overflow-hidden flex flex-col justify-between ${box.color}`}
+                        >
+                            <div>
+                                <div
+                                    className={`px-3 py-2 text-xs font-extrabold font-mono border-b border-slate-800/80 ${box.headerColor}`}
+                                >
+                                    {box.name}
+                                </div>
+                                <div className="p-3 space-y-1.5 text-[11px] font-mono text-slate-200">
+                                    {box.cols.map((c) => (
+                                        <div key={c} className="truncate">
+                                            {c}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="px-3 py-1.5 bg-slate-950/80 border-t border-slate-800/80 text-[10px] font-bold text-indigo-300">
+                                🔗 {box.rel}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* 3. LIVE ACADEMIC SQL QUERY RUNNER (GROUP BY / JOIN / EXPLAIN) */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
                 <div>
                     <h2 className="text-base font-bold text-white">
@@ -374,7 +482,7 @@ export default function DbmsAnalyticsPage({
                 )}
             </div>
 
-            {/* 3. INTERACTIVE SQL TRANSACTION & TRIGGER INSPECTOR */}
+            {/* 4. INTERACTIVE SQL TRANSACTION & TRIGGER INSPECTOR */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
                 <div>
                     <h2 className="text-base font-bold text-white">
@@ -412,84 +520,6 @@ export default function DbmsAnalyticsPage({
                     <pre className="bg-slate-900 border border-slate-800 rounded-lg p-4 text-xs font-mono text-emerald-300 overflow-x-auto leading-relaxed">
                         {selectedSql.sql}
                     </pre>
-                </div>
-            </div>
-
-            {/* 4. 3NF NORMALIZED TABLES & ER RELATIONSHIPS */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-                <h2 className="text-base font-bold text-white">
-                    🗄️ 8 Normalized (3NF) MySQL InnoDB Tables &amp; Cardinalities
-                </h2>
-                <div className="overflow-x-auto rounded-xl border border-slate-800">
-                    <table className="w-full text-left text-xs text-slate-300">
-                        <thead className="bg-slate-950 text-slate-400 uppercase text-[10px]">
-                            <tr>
-                                <th className="px-4 py-2.5">Table Name</th>
-                                <th className="px-4 py-2.5">Normal Form</th>
-                                <th className="px-4 py-2.5">Primary Key</th>
-                                <th className="px-4 py-2.5">Relationships &amp; Indexes</th>
-                                <th className="px-4 py-2.5">Live Active Rows</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-800">
-                            <tr>
-                                <td className="px-4 py-2.5 font-mono font-bold text-white">users</td>
-                                <td className="px-4 py-2.5 text-emerald-400 font-bold">3NF</td>
-                                <td className="px-4 py-2.5 font-mono">user_id</td>
-                                <td className="px-4 py-2.5">1:N -&gt; bookings, 1:0..N -&gt; show_seats (holds)</td>
-                                <td className="px-4 py-2.5 font-bold">{users.length} users</td>
-                            </tr>
-                            <tr>
-                                <td className="px-4 py-2.5 font-mono font-bold text-white">movies</td>
-                                <td className="px-4 py-2.5 text-emerald-400 font-bold">3NF</td>
-                                <td className="px-4 py-2.5 font-mono">movie_id</td>
-                                <td className="px-4 py-2.5">1:N -&gt; shows, CHECK (duration_mins &gt; 0)</td>
-                                <td className="px-4 py-2.5 font-bold">3+ movies</td>
-                            </tr>
-                            <tr>
-                                <td className="px-4 py-2.5 font-mono font-bold text-white">screens</td>
-                                <td className="px-4 py-2.5 text-emerald-400 font-bold">3NF</td>
-                                <td className="px-4 py-2.5 font-mono">screen_id</td>
-                                <td className="px-4 py-2.5">1:N -&gt; shows, UNIQUE (screen_name)</td>
-                                <td className="px-4 py-2.5 font-bold">2 screens</td>
-                            </tr>
-                            <tr>
-                                <td className="px-4 py-2.5 font-mono font-bold text-white">shows</td>
-                                <td className="px-4 py-2.5 text-emerald-400 font-bold">3NF</td>
-                                <td className="px-4 py-2.5 font-mono">show_id</td>
-                                <td className="px-4 py-2.5">1:N -&gt; show_seats (ON DELETE CASCADE)</td>
-                                <td className="px-4 py-2.5 font-bold">{shows.length} shows</td>
-                            </tr>
-                            <tr>
-                                <td className="px-4 py-2.5 font-mono font-bold text-amber-300">show_seats</td>
-                                <td className="px-4 py-2.5 text-emerald-400 font-bold">3NF</td>
-                                <td className="px-4 py-2.5 font-mono">show_seat_id</td>
-                                <td className="px-4 py-2.5">INDEX (show_id, status, held_until), version (OCC)</td>
-                                <td className="px-4 py-2.5 font-bold">{seats.length} seats (active show)</td>
-                            </tr>
-                            <tr>
-                                <td className="px-4 py-2.5 font-mono font-bold text-white">bookings</td>
-                                <td className="px-4 py-2.5 text-emerald-400 font-bold">3NF</td>
-                                <td className="px-4 py-2.5 font-mono">booking_id</td>
-                                <td className="px-4 py-2.5">1:N -&gt; booking_seats, lock_mode, expires_at</td>
-                                <td className="px-4 py-2.5 font-bold">{bookings.length} recent orders</td>
-                            </tr>
-                            <tr>
-                                <td className="px-4 py-2.5 font-mono font-bold text-white">booking_seats</td>
-                                <td className="px-4 py-2.5 text-emerald-400 font-bold">3NF (1NF M:N)</td>
-                                <td className="px-4 py-2.5 font-mono">booking_seat_id</td>
-                                <td className="px-4 py-2.5">Resolves M:N between bookings &amp; show_seats</td>
-                                <td className="px-4 py-2.5 font-bold">Junction mapped</td>
-                            </tr>
-                            <tr>
-                                <td className="px-4 py-2.5 font-mono font-bold text-indigo-300">seat_audit_logs</td>
-                                <td className="px-4 py-2.5 text-emerald-400 font-bold">3NF</td>
-                                <td className="px-4 py-2.5 font-mono">log_id</td>
-                                <td className="px-4 py-2.5">1:N via Trigger • TIMESTAMP(3) millisecond log</td>
-                                <td className="px-4 py-2.5 font-bold">{auditLogs.length} audit logs</td>
-                            </tr>
-                        </tbody>
-                    </table>
                 </div>
             </div>
 

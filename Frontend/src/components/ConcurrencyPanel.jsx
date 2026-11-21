@@ -5,6 +5,7 @@ export default function ConcurrencyPanel({
     seats,
     auditLogs,
     onSimulateRace,
+    onAutoCompareBothStrategies,
     simulationResult,
     sampleResults = []
 }) {
@@ -14,6 +15,7 @@ export default function ConcurrencyPanel({
     const [testMode, setTestMode] = useState('SINGLE'); // 'SINGLE' | 'DEADLOCK_PAIR'
     const [benchmarkHistory, setBenchmarkHistory] = useState([]);
     const [seatFilter, setSeatFilter] = useState('');
+    const [comparingBoth, setComparingBoth] = useState(false);
 
     const selectedId = Number(targetSeatId) || availableSeats[0]?.show_seat_id || '';
     const secondSeat =
@@ -42,6 +44,20 @@ export default function ConcurrencyPanel({
             );
         } else {
             onSimulateRace([Number(selectedId)], concurrentCount, false);
+        }
+    }
+
+    async function handleDualBenchmark() {
+        if (!onAutoCompareBothStrategies || availableSeats.length < 2) return;
+        setComparingBoth(true);
+        try {
+            await onAutoCompareBothStrategies(
+                availableSeats[0].show_seat_id,
+                availableSeats[1].show_seat_id,
+                concurrentCount
+            );
+        } finally {
+            setComparingBoth(false);
         }
     }
 
@@ -150,6 +166,20 @@ export default function ConcurrencyPanel({
                             ? '🔀 Fire Reverse-Order Deadlock Attack'
                             : '⚡ Fire Simultaneous Requests'}
                     </button>
+
+                    {/* 1-Click Auto-Compare Pessimistic vs Optimistic */}
+                    {onAutoCompareBothStrategies && availableSeats.length >= 2 && (
+                        <button
+                            type="button"
+                            onClick={handleDualBenchmark}
+                            disabled={comparingBoth}
+                            className="w-full py-2 rounded-lg text-xs font-bold bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40 transition cursor-pointer"
+                        >
+                            {comparingBoth
+                                ? 'Running Dual Benchmark...'
+                                : '⚖️ 1-Click Auto-Compare Pessimistic vs. Optimistic'}
+                        </button>
+                    )}
                 </div>
 
                 {/* 2. Latest Simulation Scoreboard */}
@@ -294,7 +324,6 @@ export default function ConcurrencyPanel({
                     )}
                 </div>
 
-                {/* Seat-Specific Lifecycle Filter */}
                 <div className="flex items-center gap-2">
                     <input
                         type="text"

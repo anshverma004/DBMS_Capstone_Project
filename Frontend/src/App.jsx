@@ -21,6 +21,7 @@ import {
 import { enrichShow } from './constants/theaterData';
 
 import Navbar from './components/Navbar';
+import Footer from './components/Footer';
 import PaymentModal from './components/PaymentModal';
 import LandingPage from './pages/LandingPage';
 import SignupPage from './pages/SignupPage';
@@ -338,6 +339,35 @@ export default function App() {
         }
     }
 
+    // 1-Click Dual Strategy Benchmark (Runs PESSIMISTIC on Seat 1, then OPTIMISTIC on Seat 2)
+    async function handleAutoCompareBothStrategies(seatId1, seatId2, concurrentUsers = 50) {
+        try {
+            const res1 = await simulateRaceApi(selectedShowId, {
+                seatIds: [Number(seatId1)],
+                concurrentUsers,
+                lockMode: 'PESSIMISTIC',
+                reverseOrderDeadlockTest: false
+            });
+            setSimulationResult(res1.summary);
+
+            const res2 = await simulateRaceApi(selectedShowId, {
+                seatIds: [Number(seatId2)],
+                concurrentUsers,
+                lockMode: 'OPTIMISTIC',
+                reverseOrderDeadlockTest: false
+            });
+            setSimulationResult(res2.summary);
+            setSampleResults(res2.sampleResults || []);
+
+            setMessage(
+                `⚖️ Dual Benchmark Complete! PESSIMISTIC: ${res1.summary.durationMs}ms (1 Won, ${res1.summary.preventedDoubleBookings} Blocked) vs. OPTIMISTIC: ${res2.summary.durationMs}ms (1 Won, ${res2.summary.preventedDoubleBookings} Blocked)!`
+            );
+            await loadShowData(selectedShowId);
+        } catch (err) {
+            setMessage(`Error: ${err.message}`);
+        }
+    }
+
     // Reset show demo (Calls MySQL Stored Procedure)
     async function handleResetShow(targetShowId = selectedShowId) {
         try {
@@ -365,155 +395,162 @@ export default function App() {
     ).length;
 
     return (
-        <div className="min-h-screen bg-slate-950 text-slate-100">
-            <Navbar
-                currentPage={currentPage}
-                setCurrentPage={setCurrentPage}
-                loggedInUser={loggedInUser}
-                onLogout={handleLogout}
-                lockMode={lockMode}
-                setLockMode={setLockMode}
-                onResetShow={() => handleResetShow(selectedShowId)}
-                myBookingsCount={myBookingsCount}
-            />
+        <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between">
+            <div>
+                <Navbar
+                    currentPage={currentPage}
+                    setCurrentPage={setCurrentPage}
+                    loggedInUser={loggedInUser}
+                    onLogout={handleLogout}
+                    lockMode={lockMode}
+                    setLockMode={setLockMode}
+                    onResetShow={() => handleResetShow(selectedShowId)}
+                    myBookingsCount={myBookingsCount}
+                />
 
-            <main className="max-w-7xl mx-auto px-6 py-6">
-                {message && (
-                    <div
-                        className={`mb-5 px-4 py-3 rounded-xl border text-xs font-medium flex items-center justify-between ${
-                            isError
-                                ? 'bg-rose-950/60 border-rose-500/40 text-rose-300'
-                                : 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300'
-                        }`}
-                    >
-                        <span>
-                            <strong className="uppercase tracking-wider mr-1.5">Status:</strong>{' '}
-                            {message}
-                        </span>
-                        <button
-                            onClick={() => setMessage('')}
-                            className="text-slate-400 hover:text-white ml-4 cursor-pointer"
+                <main className="max-w-7xl mx-auto px-6 py-6">
+                    {message && (
+                        <div
+                            className={`mb-5 px-4 py-3 rounded-xl border text-xs font-medium flex items-center justify-between ${
+                                isError
+                                    ? 'bg-rose-950/60 border-rose-500/40 text-rose-300'
+                                    : 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300'
+                            }`}
                         >
-                            ✕
-                        </button>
-                    </div>
-                )}
+                            <span>
+                                <strong className="uppercase tracking-wider mr-1.5">
+                                    Status:
+                                </strong>{' '}
+                                {message}
+                            </span>
+                            <button
+                                onClick={() => setMessage('')}
+                                className="text-slate-400 hover:text-white ml-4 cursor-pointer"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                    )}
 
-                {/* PAGE 1: PUBLIC LANDING PAGE */}
-                {currentPage === 'landing' && (
-                    <LandingPage
-                        loggedInUser={loggedInUser}
-                        onGoToLogin={() => {
-                            setMessage('');
-                            setCurrentPage('login');
-                        }}
-                        onGoToSignup={() => {
-                            setMessage('');
-                            setCurrentPage('signup');
-                        }}
-                        onGoToTheaters={() => {
-                            setMessage('');
-                            setCurrentPage('theaters');
-                        }}
-                    />
-                )}
+                    {/* PAGE 1: PUBLIC LANDING PAGE */}
+                    {currentPage === 'landing' && (
+                        <LandingPage
+                            loggedInUser={loggedInUser}
+                            onGoToLogin={() => {
+                                setMessage('');
+                                setCurrentPage('login');
+                            }}
+                            onGoToSignup={() => {
+                                setMessage('');
+                                setCurrentPage('signup');
+                            }}
+                            onGoToTheaters={() => {
+                                setMessage('');
+                                setCurrentPage('theaters');
+                            }}
+                        />
+                    )}
 
-                {/* PAGE 2: SEPARATE SIGN UP PAGE */}
-                {currentPage === 'signup' && (
-                    <SignupPage
-                        onSignupSubmit={handleSignupSubmit}
-                        onGoToLogin={() => {
-                            setMessage('');
-                            setCurrentPage('login');
-                        }}
-                    />
-                )}
+                    {/* PAGE 2: SEPARATE SIGN UP PAGE */}
+                    {currentPage === 'signup' && (
+                        <SignupPage
+                            onSignupSubmit={handleSignupSubmit}
+                            onGoToLogin={() => {
+                                setMessage('');
+                                setCurrentPage('login');
+                            }}
+                        />
+                    )}
 
-                {/* PAGE 3: SEPARATE LOG IN PAGE */}
-                {currentPage === 'login' && (
-                    <LoginPage
-                        prefilledEmail={prefilledEmail}
-                        onLoginSubmit={handleLoginSubmit}
-                        onGoToSignup={() => {
-                            setMessage('');
-                            setCurrentPage('signup');
-                        }}
-                    />
-                )}
+                    {/* PAGE 3: SEPARATE LOG IN PAGE */}
+                    {currentPage === 'login' && (
+                        <LoginPage
+                            prefilledEmail={prefilledEmail}
+                            onLoginSubmit={handleLoginSubmit}
+                            onGoToSignup={() => {
+                                setMessage('');
+                                setCurrentPage('signup');
+                            }}
+                        />
+                    )}
 
-                {/* PAGE 4: SEPARATE SEARCH THEATERS IN CITIES & LIST OF THEATERS PAGE */}
-                {currentPage === 'theaters' && (
-                    <TheaterSearchPage
-                        shows={shows}
-                        selectedCity={selectedCity}
-                        setSelectedCity={setSelectedCity}
-                        searchQuery={searchQuery}
-                        setSearchQuery={setSearchQuery}
-                        onSelectTheaterShow={handleSelectTheaterShow}
-                    />
-                )}
+                    {/* PAGE 4: SEPARATE SEARCH THEATERS IN CITIES & LIST OF THEATERS PAGE */}
+                    {currentPage === 'theaters' && (
+                        <TheaterSearchPage
+                            shows={shows}
+                            selectedCity={selectedCity}
+                            setSelectedCity={setSelectedCity}
+                            searchQuery={searchQuery}
+                            setSearchQuery={setSearchQuery}
+                            onSelectTheaterShow={handleSelectTheaterShow}
+                        />
+                    )}
 
-                {/* PAGE 5: SEPARATE SEAT SELECTION & BOOKING PAGE */}
-                {currentPage === 'booking' && (
-                    <BookingPage
-                        currentShow={currentShowObj}
-                        selectedTimeSlot={selectedTimeSlot}
-                        seats={seats}
-                        selectedSeatIds={selectedSeatIds}
-                        onToggleSeat={handleToggleSeat}
-                        onSetSelectedSeats={setSelectedSeatIds}
-                        onHoldSeats={handleHoldSeats}
-                        bookings={bookings}
-                        onConfirmBooking={handleRequestConfirmPayment}
-                        onCancelBooking={handleCancelBooking}
-                        onForceExpireHolds={() => handleForceExpireHolds(selectedShowId)}
-                        auditLogs={auditLogs}
-                        onSimulateRace={handleSimulateRace}
-                        simulationResult={simulationResult}
-                        sampleResults={sampleResults}
-                        onBackToTheaters={() => setCurrentPage('theaters')}
-                        onGoToMyBookings={() => setCurrentPage('mybookings')}
-                    />
-                )}
+                    {/* PAGE 5: SEPARATE SEAT SELECTION & BOOKING PAGE */}
+                    {currentPage === 'booking' && (
+                        <BookingPage
+                            currentShow={currentShowObj}
+                            selectedTimeSlot={selectedTimeSlot}
+                            seats={seats}
+                            selectedSeatIds={selectedSeatIds}
+                            onToggleSeat={handleToggleSeat}
+                            onSetSelectedSeats={setSelectedSeatIds}
+                            onHoldSeats={handleHoldSeats}
+                            bookings={bookings}
+                            onConfirmBooking={handleRequestConfirmPayment}
+                            onCancelBooking={handleCancelBooking}
+                            onForceExpireHolds={() => handleForceExpireHolds(selectedShowId)}
+                            auditLogs={auditLogs}
+                            onSimulateRace={handleSimulateRace}
+                            onAutoCompareBothStrategies={handleAutoCompareBothStrategies}
+                            simulationResult={simulationResult}
+                            sampleResults={sampleResults}
+                            onBackToTheaters={() => setCurrentPage('theaters')}
+                            onGoToMyBookings={() => setCurrentPage('mybookings')}
+                        />
+                    )}
 
-                {/* PAGE 6: DEDICATED MY BOOKINGS & PRINTABLE M-TICKETS PAGE */}
-                {currentPage === 'mybookings' && (
-                    <MyBookingsPage
-                        loggedInUser={loggedInUser}
-                        bookings={bookings}
-                        currentShow={currentShowObj}
-                        onOpenPaymentModal={(b) => setPaymentModalBooking(b)}
-                        onCancelBooking={handleCancelBooking}
-                        onBackToTheaters={() => setCurrentPage('theaters')}
-                    />
-                )}
+                    {/* PAGE 6: DEDICATED MY BOOKINGS & PRINTABLE M-TICKETS PAGE */}
+                    {currentPage === 'mybookings' && (
+                        <MyBookingsPage
+                            loggedInUser={loggedInUser}
+                            bookings={bookings}
+                            currentShow={currentShowObj}
+                            onOpenPaymentModal={(b) => setPaymentModalBooking(b)}
+                            onCancelBooking={handleCancelBooking}
+                            onBackToTheaters={() => setCurrentPage('theaters')}
+                        />
+                    )}
 
-                {/* PAGE 7: DEDICATED DBMS LIVE ANALYTICS & SQL INSPECTOR PAGE */}
-                {currentPage === 'analytics' && (
-                    <DbmsAnalyticsPage
-                        shows={shows}
-                        seats={seats}
-                        bookings={bookings}
-                        auditLogs={auditLogs}
-                        users={users}
-                        onBackToBooking={() => setCurrentPage('booking')}
-                    />
-                )}
+                    {/* PAGE 7: DEDICATED DBMS LIVE ANALYTICS & SQL INSPECTOR PAGE */}
+                    {currentPage === 'analytics' && (
+                        <DbmsAnalyticsPage
+                            shows={shows}
+                            seats={seats}
+                            bookings={bookings}
+                            auditLogs={auditLogs}
+                            users={users}
+                            onBackToBooking={() => setCurrentPage('booking')}
+                        />
+                    )}
 
-                {/* PAGE 8: DEDICATED CINEMA ADMIN & FLASH-SALE CONTROL CENTER */}
-                {currentPage === 'admin' && (
-                    <AdminPage
-                        shows={shows}
-                        onCreateMovieShow={handleCreateMovieShow}
-                        onDeleteCustomShow={handleDeleteCustomShow}
-                        onToggleFlashSale={handleToggleFlashSale}
-                        onCrowdFill={handleCrowdFill}
-                        onForceExpire={handleForceExpireHolds}
-                        onResetShowById={handleResetShow}
-                        onOpenShowInHall={(id) => handleSelectTheaterShow(id)}
-                    />
-                )}
-            </main>
+                    {/* PAGE 8: DEDICATED CINEMA ADMIN & FLASH-SALE CONTROL CENTER */}
+                    {currentPage === 'admin' && (
+                        <AdminPage
+                            shows={shows}
+                            onCreateMovieShow={handleCreateMovieShow}
+                            onDeleteCustomShow={handleDeleteCustomShow}
+                            onToggleFlashSale={handleToggleFlashSale}
+                            onCrowdFill={handleCrowdFill}
+                            onForceExpire={handleForceExpireHolds}
+                            onResetShowById={handleResetShow}
+                            onOpenShowInHall={(id) => handleSelectTheaterShow(id)}
+                        />
+                    )}
+                </main>
+            </div>
+
+            <Footer loggedInUser={loggedInUser} setCurrentPage={setCurrentPage} />
 
             {/* UPI / Card / Instant Payment Checkout Modal */}
             <PaymentModal
