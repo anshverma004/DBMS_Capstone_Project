@@ -44,6 +44,7 @@ export default function SeatMap({
 }) {
     const [tickOffset, setTickOffset] = useState(0);
     const [tierFilter, setTierFilter] = useState('ALL');
+    const [heatmapMode, setHeatmapMode] = useState(false);
     const [watchedSeatIds, setWatchedSeatIds] = useState([]);
     const [watchAlert, setWatchAlert] = useState('');
 
@@ -113,17 +114,17 @@ export default function SeatMap({
         );
     }
 
-    function handleAutoPickBestSeats(count) {
+    // Smart Group Presets (Couple Recliner, Family 4-Pack, Budget Front Pair)
+    function handleSmartPreset(count, targetRows = ['C', 'D', 'E', 'F', 'B', 'A']) {
         if (!onSetSelectedSeats) return;
 
-        const preferredRows = ['C', 'D', 'E', 'F', 'B', 'A'];
         const rowsMap = {};
         for (const s of seats) {
             if (!rowsMap[s.row_label]) rowsMap[s.row_label] = [];
             rowsMap[s.row_label].push(s);
         }
 
-        for (const rLabel of preferredRows) {
+        for (const rLabel of targetRows) {
             const rowSeats = (rowsMap[rLabel] || []).sort(
                 (a, b) => a.seat_number - b.seat_number
             );
@@ -206,20 +207,29 @@ export default function SeatMap({
                         </p>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-[11px] text-slate-400 font-medium">
-                            ✨ Auto-Pick Best Seats:
-                        </span>
-                        {[2, 3, 4].map((cnt) => (
-                            <button
-                                key={cnt}
-                                type="button"
-                                onClick={() => handleAutoPickBestSeats(cnt)}
-                                className="px-2.5 py-1 text-xs font-bold bg-slate-800 hover:bg-indigo-600 text-slate-200 hover:text-white border border-slate-700 rounded-lg transition cursor-pointer"
-                            >
-                                {cnt} Seats
-                            </button>
-                        ))}
+                    {/* Smart Group Combos & Auto-Picker */}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                        <button
+                            type="button"
+                            onClick={() => handleSmartPreset(2, ['E', 'F', 'D', 'C'])}
+                            className="px-2.5 py-1 text-[11px] font-bold bg-amber-500/15 hover:bg-amber-500 text-amber-300 hover:text-slate-950 border border-amber-500/30 rounded-lg transition cursor-pointer"
+                        >
+                            💑 Couple Recliner (2)
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => handleSmartPreset(4, ['C', 'D', 'E', 'B'])}
+                            className="px-2.5 py-1 text-[11px] font-bold bg-indigo-500/15 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 rounded-lg transition cursor-pointer"
+                        >
+                            👨‍👩‍👧‍👦 Family Pack (4)
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => handleSmartPreset(2, ['A', 'B', 'C'])}
+                            className="px-2.5 py-1 text-[11px] font-bold bg-cyan-500/15 hover:bg-cyan-600 text-cyan-300 hover:text-white border border-cyan-500/30 rounded-lg transition cursor-pointer"
+                        >
+                            💸 Budget Pair (2)
+                        </button>
                         {selectedSeatIds.length > 0 && onSetSelectedSeats && (
                             <button
                                 type="button"
@@ -245,7 +255,7 @@ export default function SeatMap({
                     </div>
                 )}
 
-                {/* Tier & Sweet-Spot View Filter Pills */}
+                {/* Tier & Sweet-Spot View Filter Pills + Version Contention Heatmap Toggle */}
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-5">
                     <div className="flex flex-wrap items-center gap-1.5">
                         {[
@@ -269,9 +279,18 @@ export default function SeatMap({
                             </button>
                         ))}
                     </div>
-                    <span className="text-[11px] text-amber-300">
-                        💡 Click any Yellow HELD seat to 🔔 Auto-Grab on Expiry
-                    </span>
+
+                    <button
+                        type="button"
+                        onClick={() => setHeatmapMode((h) => !h)}
+                        className={`px-3 py-1 rounded-lg text-[11px] font-bold border transition cursor-pointer ${
+                            heatmapMode
+                                ? 'bg-orange-500 text-slate-950 border-orange-400 shadow-lg shadow-orange-500/30'
+                                : 'bg-slate-950 text-orange-300 border-orange-500/40 hover:bg-orange-500/15'
+                        }`}
+                    >
+                        🔥 {heatmapMode ? 'Exit Contention Heatmap' : 'Version Contention Heatmap'}
+                    </button>
                 </div>
 
                 {/* Curved Cinema Screen Banner */}
@@ -282,25 +301,45 @@ export default function SeatMap({
                     </span>
                 </div>
 
-                {/* Color Legend */}
-                <div className="flex flex-wrap items-center justify-center gap-5 text-xs text-slate-400 mb-6">
-                    <span className="flex items-center gap-1.5">
-                        <span className="w-3.5 h-3.5 rounded bg-emerald-950 border border-emerald-500 inline-block"></span>
-                        Available
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                        <span className="w-3.5 h-3.5 rounded bg-indigo-600 border border-indigo-400 inline-block"></span>
-                        Selected by You
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                        <span className="w-3.5 h-3.5 rounded bg-amber-500/25 border border-amber-400 inline-block"></span>
-                        Held (Click to 🔔 Watch)
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                        <span className="w-3.5 h-3.5 rounded bg-rose-950 border border-rose-700 inline-block"></span>
-                        Booked (Sold)
-                    </span>
-                </div>
+                {/* Color Legend (Standard vs Heatmap Mode) */}
+                {!heatmapMode ? (
+                    <div className="flex flex-wrap items-center justify-center gap-5 text-xs text-slate-400 mb-6">
+                        <span className="flex items-center gap-1.5">
+                            <span className="w-3.5 h-3.5 rounded bg-emerald-950 border border-emerald-500 inline-block"></span>
+                            Available
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                            <span className="w-3.5 h-3.5 rounded bg-indigo-600 border border-indigo-400 inline-block"></span>
+                            Selected by You
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                            <span className="w-3.5 h-3.5 rounded bg-amber-500/25 border border-amber-400 inline-block"></span>
+                            Held (Click to 🔔 Watch)
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                            <span className="w-3.5 h-3.5 rounded bg-rose-950 border border-rose-700 inline-block"></span>
+                            Booked (Sold)
+                        </span>
+                    </div>
+                ) : (
+                    <div className="flex flex-wrap items-center justify-center gap-5 text-xs text-slate-300 mb-6 bg-orange-950/30 border border-orange-500/30 rounded-xl py-2 px-4">
+                        <span className="font-bold text-orange-300">
+                            🔥 MySQL Version Contention Heatmap:
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                            <span className="w-3.5 h-3.5 rounded bg-slate-900 border border-slate-700 inline-block"></span>
+                            v1 (Untouched)
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                            <span className="w-3.5 h-3.5 rounded bg-amber-500/30 border border-amber-400 inline-block"></span>
+                            v2 (Moderate Lock History)
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                            <span className="w-3.5 h-3.5 rounded bg-rose-600 border border-rose-300 inline-block"></span>
+                            v3+ (Hot Contention Target!)
+                        </span>
+                    </div>
+                )}
 
                 {/* TIERED AUDITORIUM ROWS WITH CENTER AISLE WALKWAY */}
                 <div className="space-y-5 mb-6">
@@ -580,7 +619,19 @@ export default function SeatMap({
 
         let seatStyle =
             'bg-emerald-950/60 border-emerald-500/60 text-emerald-300 hover:bg-emerald-900/70 cursor-pointer';
-        if (isSelected) {
+
+        if (heatmapMode) {
+            if (Number(seat.version) >= 3) {
+                seatStyle =
+                    'bg-rose-600 border-rose-300 text-white shadow-md shadow-rose-500/40 cursor-pointer';
+            } else if (Number(seat.version) === 2) {
+                seatStyle =
+                    'bg-amber-500/35 border-amber-400 text-amber-200 cursor-pointer';
+            } else {
+                seatStyle =
+                    'bg-slate-950/80 border-slate-800 text-slate-400 cursor-pointer';
+            }
+        } else if (isSelected) {
             seatStyle =
                 'bg-indigo-600 border-indigo-400 text-white ring-2 ring-indigo-400/40 cursor-pointer';
         } else if (seat.status === 'HELD') {
@@ -618,11 +669,13 @@ export default function SeatMap({
                 <div className="flex items-center gap-0.5">
                     {bestView && <span className="text-[8px]">⭐</span>}
                     <span className="text-xs font-bold">{seat.seat_code}</span>
-                    <span className="text-[8px] font-mono opacity-70">v{seat.version}</span>
+                    <span className="text-[8px] font-mono opacity-80">v{seat.version}</span>
                 </div>
                 <span className="text-[10px] opacity-80">₹{seat.price}</span>
                 <span className="text-[8px] font-semibold uppercase mt-0.5 truncate max-w-full">
-                    {isSelected
+                    {heatmapMode
+                        ? `${seat.version - 1} Txns`
+                        : isSelected
                         ? 'SELECTED'
                         : seat.status === 'HELD'
                         ? isWatched

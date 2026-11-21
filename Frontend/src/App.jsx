@@ -12,6 +12,7 @@ import {
     cancelBookingApi,
     simulateRaceApi,
     createMovieShowApi,
+    deleteCustomShowApi,
     resetShowApi,
     forceExpireHoldsApi,
     toggleFlashSaleApi,
@@ -266,6 +267,21 @@ export default function App() {
         }
     }
 
+    // Delete Custom Show (Demonstrates ON DELETE CASCADE)
+    async function handleDeleteCustomShow(targetShowId) {
+        try {
+            const res = await deleteCustomShowApi(targetShowId);
+            setMessage(res.message);
+            const showsData = await fetchShows();
+            setShows(showsData);
+            if (Number(selectedShowId) === Number(targetShowId)) {
+                setSelectedShowId(1);
+            }
+        } catch (err) {
+            setMessage(`Error: ${err.message}`);
+        }
+    }
+
     // Fast-forward 5-minute TTL timer for instant viva demo
     async function handleForceExpireHolds(targetShowId = selectedShowId) {
         try {
@@ -489,6 +505,7 @@ export default function App() {
                     <AdminPage
                         shows={shows}
                         onCreateMovieShow={handleCreateMovieShow}
+                        onDeleteCustomShow={handleDeleteCustomShow}
                         onToggleFlashSale={handleToggleFlashSale}
                         onCrowdFill={handleCrowdFill}
                         onForceExpire={handleForceExpireHolds}

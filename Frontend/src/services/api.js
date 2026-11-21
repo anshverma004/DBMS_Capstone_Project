@@ -134,6 +134,12 @@ export const createMovieShowApi = (payload) =>
         body: JSON.stringify(payload)
     });
 
+export const deleteCustomShowApi = (showId) =>
+    request(`/shows/${showId}`, { method: 'DELETE' });
+
+export const runPresetQueryApi = (queryKey) =>
+    request(`/analytics/query/${queryKey}`);
+
 export const resetShowApi = (showId) =>
     request(`/shows/${showId}/reset`, { method: 'POST' });
 

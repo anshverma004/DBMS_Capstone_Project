@@ -4,6 +4,7 @@ import { enrichShow } from '../constants/theaterData';
 export default function AdminPage({
     shows,
     onCreateMovieShow,
+    onDeleteCustomShow,
     onToggleFlashSale,
     onCrowdFill,
     onForceExpire,
@@ -50,8 +51,9 @@ export default function AdminPage({
                     </h1>
                     <p className="text-xs text-slate-400 mt-1">
                         Insert a new Movie &amp; Showtime (calling Stored Procedure{' '}
-                        <code className="text-emerald-400">sp_generate_show_seats</code>), toggle
-                        Flash-Sale pricing, simulate crowd fills, or reset inventories.
+                        <code className="text-emerald-400">sp_generate_show_seats</code>), test{' '}
+                        <code className="text-rose-400">ON DELETE CASCADE</code>, toggle Flash-Sale
+                        pricing, simulate crowd fills, or reset inventories.
                     </p>
                 </div>
             </div>
@@ -147,6 +149,7 @@ export default function AdminPage({
                 {enrichedShows.map((sh) => {
                     const soldSeats = sh.total_capacity - sh.available_seats;
                     const occupancyPct = Math.round((soldSeats / sh.total_capacity) * 100);
+                    const isCustomShow = Number(sh.show_id) > 3;
 
                     return (
                         <div
@@ -170,6 +173,14 @@ export default function AdminPage({
                                                 ? '⚡ FLASH SALE LIVE (₹99 / ₹149 / ₹249)'
                                                 : '🎬 REGULAR PRICING (₹180 / ₹280 / ₹450)'}
                                         </span>
+                                        {isCustomShow && onDeleteCustomShow && (
+                                            <button
+                                                onClick={() => onDeleteCustomShow(sh.show_id)}
+                                                className="px-2.5 py-0.5 rounded-full bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-bold cursor-pointer"
+                                            >
+                                                🗑️ Delete Show (ON DELETE CASCADE)
+                                            </button>
+                                        )}
                                     </div>
                                     <h3 className="text-lg font-extrabold text-white">
                                         {sh.movie_title}
