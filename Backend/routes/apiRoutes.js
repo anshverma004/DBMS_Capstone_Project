@@ -1,6 +1,8 @@
 import express from 'express';
 import {
     getUsers,
+    signupUser,
+    loginUser,
     getShows,
     getShowById,
     resetShowDemo
@@ -14,8 +16,12 @@ import {
 
 const router = express.Router();
 
-// Read Routes
+// Auth & User Routes
 router.get('/users', getUsers);
+router.post('/auth/signup', signupUser);
+router.post('/auth/login', loginUser);
+
+// Show Routes
 router.get('/shows', getShows);
 router.get('/shows/:showId', getShowById);
 
