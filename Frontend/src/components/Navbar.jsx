@@ -4,6 +4,7 @@ export default function Navbar({
     currentPage,
     setCurrentPage,
     loggedInUser,
+    isAdmin,
     onLogout,
     lockMode,
     setLockMode,
@@ -72,7 +73,12 @@ export default function Navbar({
                                     </span>
                                 )}
                             </button>
+                        </>
+                    )}
 
+                    {/* ADMIN-ONLY CONTROLS: Hidden from all other users! */}
+                    {isAdmin && (
+                        <>
                             <button
                                 onClick={() => setCurrentPage('analytics')}
                                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
@@ -97,8 +103,8 @@ export default function Navbar({
                         </>
                     )}
 
-                    {/* Show Lock Mode & Reset ONLY on the Seat Booking page */}
-                    {currentPage === 'booking' && loggedInUser && (
+                    {/* Show Lock Mode & Reset ONLY to Admin on the Seat Booking page */}
+                    {currentPage === 'booking' && isAdmin && (
                         <>
                             <div className="flex items-center gap-1.5 bg-slate-800/90 border border-slate-700 rounded-lg px-2.5 py-1">
                                 <label className="text-[11px] text-slate-400">Lock:</label>
@@ -147,8 +153,13 @@ export default function Navbar({
                         </div>
                     ) : (
                         <div className="flex items-center gap-2.5 pl-2 border-l border-slate-800">
-                            <span className="text-xs text-slate-300">
+                            <span className="text-xs text-slate-300 flex items-center gap-1.5">
                                 👤 <strong className="text-emerald-400">{loggedInUser.full_name}</strong>
+                                {isAdmin && (
+                                    <span className="text-[9px] font-extrabold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/40 px-1.5 py-0.2 rounded">
+                                        ADMIN
+                                    </span>
+                                )}
                             </span>
                             <button
                                 onClick={onLogout}

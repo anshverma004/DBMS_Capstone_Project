@@ -35,6 +35,19 @@ import AdminPage from './pages/AdminPage';
 const SESSION_USER_KEY = 'bms_active_user';
 const SESSION_PAGE_KEY = 'bms_active_page';
 
+// Only Ansh (Owner/Admin) has Admin privileges; all other users see customer-only UI
+function checkIsOwnerAdmin(user) {
+    if (!user) return false;
+    const name = String(user.full_name || '').toLowerCase();
+    const email = String(user.email || '').toLowerCase();
+    return (
+        name.includes('ansh') ||
+        email.includes('ansh') ||
+        name.includes('admin') ||
+        email.includes('admin')
+    );
+}
+
 export default function App() {
     const [loggedInUser, setLoggedInUser] = useState(() => {
         try {
@@ -44,6 +57,8 @@ export default function App() {
             return null;
         }
     });
+
+    const isAdmin = checkIsOwnerAdmin(loggedInUser);
 
     const [currentPage, setCurrentPage] = useState(() => {
         try {
@@ -86,6 +101,13 @@ export default function App() {
     const [sampleResults, setSampleResults] = useState([]);
     const [message, setMessage] = useState('');
     const [paymentModalBooking, setPaymentModalBooking] = useState(null);
+
+    // Prevent non-admin users from accessing admin or analytics pages
+    useEffect(() => {
+        if (!isAdmin && (currentPage === 'admin' || currentPage === 'analytics')) {
+            setCurrentPage(loggedInUser ? 'theaters' : 'landing');
+        }
+    }, [isAdmin, currentPage, loggedInUser]);
 
     // Sync session to localStorage so page refresh keeps user logged in
     useEffect(() => {
@@ -268,15 +290,15 @@ export default function App() {
         }
     }
 
-    // Delete Custom Show (Demonstrates ON DELETE CASCADE)
+    // Remove Show (Admin Only)
     async function handleDeleteCustomShow(targetShowId) {
         try {
             const res = await deleteCustomShowApi(targetShowId);
             setMessage(res.message);
             const showsData = await fetchShows();
             setShows(showsData);
-            if (Number(selectedShowId) === Number(targetShowId)) {
-                setSelectedShowId(1);
+            if (Number(selectedShowId) === Number(targetShowId) && showsData.length > 0) {
+                setSelectedShowId(showsData[0].show_id);
             }
         } catch (err) {
             setMessage(`Error: ${err.message}`);
@@ -401,6 +423,7 @@ export default function App() {
                     currentPage={currentPage}
                     setCurrentPage={setCurrentPage}
                     loggedInUser={loggedInUser}
+                    isAdmin={isAdmin}
                     onLogout={handleLogout}
                     lockMode={lockMode}
                     setLockMode={setLockMode}
@@ -499,7 +522,9 @@ export default function App() {
                             bookings={bookings}
                             onConfirmBooking={handleRequestConfirmPayment}
                             onCancelBooking={handleCancelBooking}
-                            onForceExpireHolds={() => handleForceExpireHolds(selectedShowId)}
+                            onForceExpireHolds={
+                                isAdmin ? () => handleForceExpireHolds(selectedShowId) : null
+                            }
                             auditLogs={auditLogs}
                             onSimulateRace={handleSimulateRace}
                             onAutoCompareBothStrategies={handleAutoCompareBothStrategies}
@@ -522,8 +547,8 @@ export default function App() {
                         />
                     )}
 
-                    {/* PAGE 7: DEDICATED DBMS LIVE ANALYTICS & SQL INSPECTOR PAGE */}
-                    {currentPage === 'analytics' && (
+                    {/* PAGE 7: ADMIN-ONLY DBMS ANALYTICS PAGE */}
+                    {currentPage === 'analytics' && isAdmin && (
                         <DbmsAnalyticsPage
                             shows={shows}
                             seats={seats}
@@ -534,8 +559,8 @@ export default function App() {
                         />
                     )}
 
-                    {/* PAGE 8: DEDICATED CINEMA ADMIN & FLASH-SALE CONTROL CENTER */}
-                    {currentPage === 'admin' && (
+                    {/* PAGE 8: ADMIN-ONLY CINEMA CONTROL CENTER */}
+                    {currentPage === 'admin' && isAdmin && (
                         <AdminPage
                             shows={shows}
                             onCreateMovieShow={handleCreateMovieShow}
@@ -550,7 +575,11 @@ export default function App() {
                 </main>
             </div>
 
-            <Footer loggedInUser={loggedInUser} setCurrentPage={setCurrentPage} />
+            <Footer
+                loggedInUser={loggedInUser}
+                isAdmin={isAdmin}
+                setCurrentPage={setCurrentPage}
+            />
 
             {/* UPI / Card / Instant Payment Checkout Modal */}
             <PaymentModal

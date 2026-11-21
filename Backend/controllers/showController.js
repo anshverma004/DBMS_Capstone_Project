@@ -171,15 +171,10 @@ export async function createMovieAndShow(req, res) {
     }
 }
 
-// 4. DELETE /api/shows/:showId (Demonstrates ON DELETE CASCADE referential integrity on custom shows)
+// 4. DELETE /api/shows/:showId (Admin Remove Show - cascades to show_seats and seat_audit_logs)
 export async function deleteCustomShow(req, res) {
     try {
         const showId = Number(req.params.showId);
-        if (showId <= 3) {
-            return res.status(400).json({
-                error: 'Default seeded shows (#1, #2, #3) are protected. Create a custom Show #4+ first to test ON DELETE CASCADE!'
-            });
-        }
 
         await pool.query(
             `DELETE bs FROM booking_seats bs
@@ -191,14 +186,14 @@ export async function deleteCustomShow(req, res) {
         await pool.query('DELETE FROM shows WHERE show_id = ?', [showId]);
 
         res.json({
-            message: `🗑️ Deleted Show #${showId}! MySQL ON DELETE CASCADE automatically removed all child rows in show_seats & seat_audit_logs.`
+            message: `🗑️ Removed Show #${showId} and all its seats from MySQL!`
         });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 }
 
-// 5. GET /api/analytics/query/:queryKey (Runs preset read-only academic SQL queries for DBMS Viva)
+// 5. GET /api/analytics/query/:queryKey
 export async function runPresetAnalyticsQuery(req, res) {
     const { queryKey } = req.params;
     const startTime = Date.now();
@@ -257,14 +252,13 @@ export async function runPresetAnalyticsQuery(req, res) {
     }
 }
 
-// 6. POST /api/analytics/sql (Safe Read-Only Custom SQL Console for DBMS Viva)
+// 6. POST /api/analytics/sql
 export async function runCustomReadOnlySql(req, res) {
     const rawSql = String(req.body?.sql || '').trim();
     if (!rawSql) {
         return res.status(400).json({ error: 'Please enter a SQL query.' });
     }
 
-    // Remove trailing semicolon and block multi-statement or write queries
     const cleanSql = rawSql.replace(/;+\s*$/, '');
     if (cleanSql.includes(';')) {
         return res.status(400).json({
