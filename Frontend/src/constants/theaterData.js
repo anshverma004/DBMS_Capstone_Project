@@ -1,4 +1,10 @@
-// Rich BookMyShow-style theater venue & city metadata mapped to each show_id
+// Rich BookMyShow-style theater venue, city & showtime slots metadata
+export const DATE_TABS = [
+    { id: 'today', day: 'TODAY', date: '21 NOV', label: 'Flash Drop Live' },
+    { id: 'tomorrow', day: 'TOMORROW', date: '22 NOV', label: 'Premiere Day' },
+    { id: 'weekend', day: 'SUNDAY', date: '23 NOV', label: 'Weekend Special' }
+];
+
 export const SHOW_ENRICHMENT = {
     1: {
         city: 'Gurugram (Delhi-NCR)',
@@ -10,6 +16,12 @@ export const SHOW_ENRICHMENT = {
         rating: '9.6/10',
         votes: '184.2K Votes',
         showTimeLabel: '07:00 PM (Flash Premiere Drop)',
+        timeSlots: [
+            { time: '11:15 AM', tag: 'IMAX 3D', isFlash: false },
+            { time: '03:30 PM', tag: 'LASER', isFlash: false },
+            { time: '07:00 PM', tag: '⚡ FLASH ₹99', isFlash: true },
+            { time: '10:45 PM', tag: 'VIP RECLINER', isFlash: true }
+        ],
         regularBasePrice: 180,
         flashBasePrice: 99,
         tagline: 'First-Day-First-Show IMAX Flash Sale — Flat 45% Off All Tiers!',
@@ -27,6 +39,12 @@ export const SHOW_ENRICHMENT = {
         rating: '9.8/10',
         votes: '312.5K Votes',
         showTimeLabel: '10:30 PM (10th Anniversary Special)',
+        timeSlots: [
+            { time: '12:00 PM', tag: '70MM IMAX', isFlash: false },
+            { time: '04:15 PM', tag: 'IMAX LASER', isFlash: false },
+            { time: '07:45 PM', tag: 'DOLBY 7.1', isFlash: false },
+            { time: '10:30 PM', tag: 'PRIME IMAX', isFlash: false }
+        ],
         regularBasePrice: 180,
         flashBasePrice: 180,
         tagline: 'Christopher Nolan’s Masterpiece in True IMAX Aspect Ratio',
@@ -44,6 +62,12 @@ export const SHOW_ENRICHMENT = {
         rating: '9.4/10',
         votes: '128.9K Votes',
         showTimeLabel: '08:00 PM (Dolby Atmos Flash Drop)',
+        timeSlots: [
+            { time: '10:45 AM', tag: 'DOLBY ATMOS', isFlash: false },
+            { time: '02:30 PM', tag: '4K LASER', isFlash: false },
+            { time: '08:00 PM', tag: '⚡ FLASH ₹99', isFlash: true },
+            { time: '11:15 PM', tag: 'LATE SHOW', isFlash: true }
+        ],
         regularBasePrice: 180,
         flashBasePrice: 99,
         tagline: 'Experience Arrakis in 64-Channel Overhead Dolby Atmos Sound',

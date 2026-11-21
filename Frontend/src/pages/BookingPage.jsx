@@ -4,6 +4,7 @@ import ConcurrencyPanel from '../components/ConcurrencyPanel';
 
 export default function BookingPage({
     currentShow,
+    selectedTimeSlot,
     seats,
     selectedSeatIds,
     onToggleSeat,
@@ -15,7 +16,8 @@ export default function BookingPage({
     auditLogs,
     onSimulateRace,
     simulationResult,
-    onBackToTheaters
+    onBackToTheaters,
+    onGoToMyBookings
 }) {
     return (
         <div className="space-y-6">
@@ -28,14 +30,27 @@ export default function BookingPage({
                     <h2 className="text-base font-extrabold text-white">
                         📍 {currentShow?.theaterName} —{' '}
                         <span className="text-indigo-300">{currentShow?.movie_title}</span>
+                        {selectedTimeSlot && (
+                            <span className="ml-2 text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
+                                🕒 {selectedTimeSlot}
+                            </span>
+                        )}
                     </h2>
                 </div>
-                <button
-                    onClick={onBackToTheaters}
-                    className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700 transition cursor-pointer"
-                >
-                    ← Back to Theaters List
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={onGoToMyBookings}
+                        className="px-3.5 py-2 rounded-xl bg-indigo-600/20 hover:bg-indigo-600 text-xs font-bold text-indigo-300 hover:text-white border border-indigo-500/30 transition cursor-pointer"
+                    >
+                        🎟️ View My M-Tickets
+                    </button>
+                    <button
+                        onClick={onBackToTheaters}
+                        className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700 transition cursor-pointer"
+                    >
+                        ← Back to Theaters List
+                    </button>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">

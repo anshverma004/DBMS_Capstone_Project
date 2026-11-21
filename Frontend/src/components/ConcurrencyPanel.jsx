@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 export default function ConcurrencyPanel({
     seats,
@@ -9,8 +9,23 @@ export default function ConcurrencyPanel({
     const availableSeats = seats.filter((s) => s.status === 'AVAILABLE');
     const [targetSeatId, setTargetSeatId] = useState('');
     const [concurrentCount, setConcurrentCount] = useState(50);
+    const [benchmarkHistory, setBenchmarkHistory] = useState([]);
 
     const selectedId = targetSeatId || availableSeats[0]?.show_seat_id || '';
+
+    // Append each new simulationResult into the Benchmark Comparison History
+    useEffect(() => {
+        if (simulationResult) {
+            setBenchmarkHistory((prev) => [
+                {
+                    runId: prev.length + 1,
+                    ...simulationResult,
+                    timestamp: new Date().toLocaleTimeString()
+                },
+                ...prev
+            ]);
+        }
+    }, [simulationResult]);
 
     return (
         <div className="space-y-6">
@@ -68,11 +83,11 @@ export default function ConcurrencyPanel({
                     </button>
                 </div>
 
-                {/* 2. Simulation Scoreboard */}
+                {/* 2. Latest Simulation Scoreboard */}
                 {simulationResult && (
                     <div className="mt-4 bg-slate-950 border border-slate-800 rounded-xl p-4">
                         <h4 className="text-xs font-bold uppercase tracking-wider text-amber-400 mb-2.5">
-                            Simulation Result ({simulationResult.lockModeUsed})
+                            Latest Run ({simulationResult.lockModeUsed})
                         </h4>
                         <div className="grid grid-cols-2 gap-2 text-xs">
                             <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
@@ -102,9 +117,64 @@ export default function ConcurrencyPanel({
                         </div>
                     </div>
                 )}
+
+                {/* 3. Pessimistic vs. Optimistic Benchmark Comparison Table */}
+                {benchmarkHistory.length > 0 && (
+                    <div className="mt-4 border-t border-slate-800 pt-4">
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-bold text-white">
+                                📊 Locking Strategy Benchmark Comparison
+                            </span>
+                            <button
+                                onClick={() => setBenchmarkHistory([])}
+                                className="text-[10px] text-slate-400 hover:text-rose-400 cursor-pointer"
+                            >
+                                Clear
+                            </button>
+                        </div>
+                        <div className="overflow-x-auto rounded-lg border border-slate-800">
+                            <table className="w-full text-left text-[11px] text-slate-300">
+                                <thead className="bg-slate-950 text-slate-400 uppercase text-[9px]">
+                                    <tr>
+                                        <th className="px-2.5 py-1.5">Run</th>
+                                        <th className="px-2.5 py-1.5">Strategy</th>
+                                        <th className="px-2.5 py-1.5">Users</th>
+                                        <th className="px-2.5 py-1.5">Won</th>
+                                        <th className="px-2.5 py-1.5">409 Blocked</th>
+                                        <th className="px-2.5 py-1.5">Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-800/80">
+                                    {benchmarkHistory.map((item) => (
+                                        <tr key={item.runId} className="bg-slate-950/40">
+                                            <td className="px-2.5 py-1.5 font-mono text-slate-500">
+                                                #{item.runId}
+                                            </td>
+                                            <td className="px-2.5 py-1.5 font-bold text-amber-300">
+                                                {item.lockModeUsed}
+                                            </td>
+                                            <td className="px-2.5 py-1.5">
+                                                {item.totalConcurrentRequests}
+                                            </td>
+                                            <td className="px-2.5 py-1.5 font-bold text-emerald-400">
+                                                {item.succeededCount}
+                                            </td>
+                                            <td className="px-2.5 py-1.5 font-bold text-rose-400">
+                                                {item.preventedDoubleBookings}
+                                            </td>
+                                            <td className="px-2.5 py-1.5 font-mono text-indigo-300">
+                                                {item.durationMs}ms
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
             </div>
 
-            {/* 3. MySQL Trigger Audit Logs */}
+            {/* 4. MySQL Trigger Audit Logs */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
                 <h3 className="text-sm font-bold text-white mb-3">
                     MySQL Trigger Audit Logs (seat_audit_logs)

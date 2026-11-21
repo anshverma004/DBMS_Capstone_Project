@@ -16,17 +16,20 @@ import {
 import { enrichShow } from './constants/theaterData';
 
 import Navbar from './components/Navbar';
+import PaymentModal from './components/PaymentModal';
 import LandingPage from './pages/LandingPage';
 import SignupPage from './pages/SignupPage';
 import LoginPage from './pages/LoginPage';
 import TheaterSearchPage from './pages/TheaterSearchPage';
 import BookingPage from './pages/BookingPage';
+import MyBookingsPage from './pages/MyBookingsPage';
 
 export default function App() {
-    // 5 Separate Pages: 'landing' -> 'signup' -> 'login' -> 'theaters' -> 'booking'
+    // 6 Separate Pages: 'landing' -> 'signup' -> 'login' -> 'theaters' -> 'booking' -> 'mybookings'
     const [currentPage, setCurrentPage] = useState('landing');
     const [loggedInUser, setLoggedInUser] = useState(null);
     const [prefilledEmail, setPrefilledEmail] = useState('');
+    const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
 
     // Theater search state
     const [selectedCity, setSelectedCity] = useState('ALL');
@@ -47,6 +50,7 @@ export default function App() {
 
     const [simulationResult, setSimulationResult] = useState(null);
     const [message, setMessage] = useState('');
+    const [paymentModalBooking, setPaymentModalBooking] = useState(null);
 
     // Load users and shows on startup
     async function loadInitialData() {
@@ -139,9 +143,10 @@ export default function App() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // Step 3: Click on a Theater -> Opens the Seat Selection & Booking Page
-    function handleSelectTheaterShow(showId) {
+    // Step 3: Click on a Theater / Showtime -> Opens the Seat Selection & Booking Page
+    function handleSelectTheaterShow(showId, timeSlotLabel = '') {
         setSelectedShowId(Number(showId));
+        setSelectedTimeSlot(timeSlotLabel);
         setCurrentPage('booking');
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -169,8 +174,18 @@ export default function App() {
         }
     }
 
-    // Confirm booking payment
-    async function handleConfirmBooking(bookingId) {
+    // Open Payment Gateway Modal when clicking "Confirm Payment" on a pending hold
+    function handleRequestConfirmPayment(bookingId) {
+        const found = bookings.find((b) => Number(b.booking_id) === Number(bookingId));
+        if (found) {
+            setPaymentModalBooking(found);
+        } else {
+            handleExecuteConfirmBooking(bookingId);
+        }
+    }
+
+    // Execute MySQL Payment Confirmation
+    async function handleExecuteConfirmBooking(bookingId) {
         try {
             const res = await confirmBookingApi(bookingId);
             setMessage(res.message);
@@ -227,6 +242,11 @@ export default function App() {
         shows.find((s) => Number(s.show_id) === Number(selectedShowId)),
         0
     );
+    const myBookingsCount = bookings.filter(
+        (b) =>
+            Number(b.user_id) === Number(selectedUserId) &&
+            (b.booking_status === 'PENDING' || b.booking_status === 'CONFIRMED')
+    ).length;
 
     return (
         <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -235,12 +255,10 @@ export default function App() {
                 setCurrentPage={setCurrentPage}
                 loggedInUser={loggedInUser}
                 onLogout={handleLogout}
-                users={users}
-                selectedUserId={selectedUserId}
-                setSelectedUserId={setSelectedUserId}
                 lockMode={lockMode}
                 setLockMode={setLockMode}
                 onResetShow={handleResetShow}
+                myBookingsCount={myBookingsCount}
             />
 
             <main className="max-w-7xl mx-auto px-6 py-6">
@@ -323,21 +341,43 @@ export default function App() {
                 {currentPage === 'booking' && (
                     <BookingPage
                         currentShow={currentShowObj}
+                        selectedTimeSlot={selectedTimeSlot}
                         seats={seats}
                         selectedSeatIds={selectedSeatIds}
                         onToggleSeat={handleToggleSeat}
                         onSetSelectedSeats={setSelectedSeatIds}
                         onHoldSeats={handleHoldSeats}
                         bookings={bookings}
-                        onConfirmBooking={handleConfirmBooking}
+                        onConfirmBooking={handleRequestConfirmPayment}
                         onCancelBooking={handleCancelBooking}
                         auditLogs={auditLogs}
                         onSimulateRace={handleSimulateRace}
                         simulationResult={simulationResult}
                         onBackToTheaters={() => setCurrentPage('theaters')}
+                        onGoToMyBookings={() => setCurrentPage('mybookings')}
+                    />
+                )}
+
+                {/* PAGE 6: DEDICATED MY BOOKINGS & PRINTABLE M-TICKETS PAGE */}
+                {currentPage === 'mybookings' && (
+                    <MyBookingsPage
+                        loggedInUser={loggedInUser}
+                        bookings={bookings}
+                        currentShow={currentShowObj}
+                        onOpenPaymentModal={(b) => setPaymentModalBooking(b)}
+                        onCancelBooking={handleCancelBooking}
+                        onBackToTheaters={() => setCurrentPage('theaters')}
                     />
                 )}
             </main>
+
+            {/* UPI / Card / Instant Payment Checkout Modal */}
+            <PaymentModal
+                booking={paymentModalBooking}
+                currentShow={currentShowObj}
+                onClose={() => setPaymentModalBooking(null)}
+                onConfirmPayment={handleExecuteConfirmBooking}
+            />
         </div>
     );
 }

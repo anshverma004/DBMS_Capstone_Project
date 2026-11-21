@@ -7,7 +7,8 @@ export default function Navbar({
     onLogout,
     lockMode,
     setLockMode,
-    onResetShow
+    onResetShow,
+    myBookingsCount = 0
 }) {
     return (
         <header className="bg-slate-900/95 backdrop-blur-md border-b border-slate-800 sticky top-0 z-40 shadow-lg">
@@ -44,16 +45,34 @@ export default function Navbar({
                     </button>
 
                     {loggedInUser && (
-                        <button
-                            onClick={() => setCurrentPage('theaters')}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-                                currentPage === 'theaters'
-                                    ? 'bg-rose-600 text-white'
-                                    : 'text-slate-300 hover:text-white bg-slate-800/70'
-                            }`}
-                        >
-                            📍 Search Theaters
-                        </button>
+                        <>
+                            <button
+                                onClick={() => setCurrentPage('theaters')}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                                    currentPage === 'theaters'
+                                        ? 'bg-rose-600 text-white'
+                                        : 'text-slate-300 hover:text-white bg-slate-800/70'
+                                }`}
+                            >
+                                📍 Search Theaters
+                            </button>
+
+                            <button
+                                onClick={() => setCurrentPage('mybookings')}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                                    currentPage === 'mybookings'
+                                        ? 'bg-indigo-600 text-white'
+                                        : 'text-indigo-300 hover:text-white bg-indigo-950/60 border border-indigo-500/30'
+                                }`}
+                            >
+                                🎟️ My Bookings
+                                {myBookingsCount > 0 && (
+                                    <span className="bg-rose-500 text-white text-[10px] px-1.5 rounded-full">
+                                        {myBookingsCount}
+                                    </span>
+                                )}
+                            </button>
+                        </>
                     )}
 
                     {/* Show Lock Mode & Reset ONLY on the Seat Booking page */}
