@@ -2,6 +2,7 @@ import express from 'express';
 import {
     getShows,
     getShowById,
+    createMovieAndShow,
     resetShowDemo,
     forceExpireHolds,
     toggleFlashSale,
@@ -11,6 +12,7 @@ import {
 const router = express.Router();
 
 router.get('/shows', getShows);
+router.post('/shows/create', createMovieAndShow);
 router.get('/shows/:showId', getShowById);
 router.post('/shows/:showId/reset', resetShowDemo);
 router.post('/shows/:showId/force-expire', forceExpireHolds);

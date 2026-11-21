@@ -7,6 +7,29 @@ function formatMMSS(totalSeconds) {
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
+function getSeatViewingProfile(seat) {
+    if (!seat) return null;
+    if (seat.tier === 'CLASSIC') {
+        return {
+            distance: '8.5m from IMAX Screen (Close-Up Front Angle)',
+            acoustics: '91% Direct Front Array',
+            perks: 'Ergonomic Push-Back Cushion Seat'
+        };
+    }
+    if (seat.tier === 'PRIME') {
+        return {
+            distance: '14.5m from IMAX Screen (Eye-Level Center Sweet-Spot)',
+            acoustics: '99% Optimal 360° Dolby Atmos Calibration',
+            perks: 'Panoramic Wide-Angle View + Dual Cupholders'
+        };
+    }
+    return {
+        distance: '21.0m from IMAX Screen (Elevated Stadium Back View)',
+        acoustics: '96% Rear & Overhead Surround Balance',
+        perks: '180° Motorised Leather Recliner + In-Seat Butler Service'
+    };
+}
+
 export default function SeatMap({
     seats,
     selectedSeatIds,
@@ -21,6 +44,8 @@ export default function SeatMap({
 }) {
     const [tickOffset, setTickOffset] = useState(0);
     const [tierFilter, setTierFilter] = useState('ALL');
+    const [watchedSeatIds, setWatchedSeatIds] = useState([]);
+    const [watchAlert, setWatchAlert] = useState('');
 
     useEffect(() => {
         setTickOffset(0);
@@ -32,6 +57,23 @@ export default function SeatMap({
         }, 1000);
         return () => clearInterval(timer);
     }, []);
+
+    // Auto-Select any Watched HELD seat the instant it expires back to AVAILABLE!
+    useEffect(() => {
+        if (watchedSeatIds.length === 0 || !onSetSelectedSeats) return;
+        const newlyFreed = seats.filter(
+            (s) => watchedSeatIds.includes(s.show_seat_id) && s.status === 'AVAILABLE'
+        );
+        if (newlyFreed.length > 0) {
+            const freedIds = newlyFreed.map((s) => s.show_seat_id);
+            const freedCodes = newlyFreed.map((s) => s.seat_code).join(', ');
+            onSetSelectedSeats((prev) => [...new Set([...prev, ...freedIds])]);
+            setWatchedSeatIds((prev) => prev.filter((id) => !freedIds.includes(id)));
+            setWatchAlert(
+                `🔔 Watched Seat (${freedCodes}) just expired and was automatically selected for you!`
+            );
+        }
+    }, [seats, watchedSeatIds, onSetSelectedSeats]);
 
     const pendingBookings = bookings.filter((b) => b.booking_status === 'PENDING');
     const confirmedBookings = bookings.filter((b) => b.booking_status === 'CONFIRMED');
@@ -51,11 +93,23 @@ export default function SeatMap({
         0
     );
 
+    const lastSelectedSeat =
+        selectedSeatObjects[selectedSeatObjects.length - 1] || null;
+    const viewProfile = getSeatViewingProfile(lastSelectedSeat);
+
     function isBestViewSeat(seat) {
         return (
             ['C', 'D'].includes(seat.row_label) &&
             seat.seat_number >= 4 &&
             seat.seat_number <= 7
+        );
+    }
+
+    function toggleWatchHeldSeat(seatId) {
+        setWatchedSeatIds((prev) =>
+            prev.includes(seatId)
+                ? prev.filter((id) => id !== seatId)
+                : [...prev, seatId]
         );
     }
 
@@ -178,6 +232,19 @@ export default function SeatMap({
                     </div>
                 </div>
 
+                {/* Watch Alert Banner */}
+                {watchAlert && (
+                    <div className="mb-4 px-4 py-2.5 rounded-xl bg-indigo-950/70 border border-indigo-500/50 text-indigo-200 text-xs flex items-center justify-between">
+                        <span>{watchAlert}</span>
+                        <button
+                            onClick={() => setWatchAlert('')}
+                            className="text-slate-400 hover:text-white ml-3 cursor-pointer"
+                        >
+                            ✕
+                        </button>
+                    </div>
+                )}
+
                 {/* Tier & Sweet-Spot View Filter Pills */}
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-5">
                     <div className="flex flex-wrap items-center gap-1.5">
@@ -203,7 +270,7 @@ export default function SeatMap({
                         ))}
                     </div>
                     <span className="text-[11px] text-amber-300">
-                        ⭐ = Acoustic &amp; Visual Center Sweet-Spot
+                        💡 Click any Yellow HELD seat to 🔔 Auto-Grab on Expiry
                     </span>
                 </div>
 
@@ -227,7 +294,7 @@ export default function SeatMap({
                     </span>
                     <span className="flex items-center gap-1.5">
                         <span className="w-3.5 h-3.5 rounded bg-amber-500/25 border border-amber-400 inline-block"></span>
-                        Held (5-Min Lock)
+                        Held (Click to 🔔 Watch)
                     </span>
                     <span className="flex items-center gap-1.5">
                         <span className="w-3.5 h-3.5 rounded bg-rose-950 border border-rose-700 inline-block"></span>
@@ -317,6 +384,31 @@ export default function SeatMap({
                     })}
                 </div>
 
+                {/* "👁️ VIEW FROM SELECTED SEAT" DISTANCE & ACOUSTIC PREVIEW BAR */}
+                {lastSelectedSeat && viewProfile && (
+                    <div className="mb-4 bg-indigo-950/35 border border-indigo-500/30 rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-3 text-xs">
+                        <div className="space-y-0.5">
+                            <div className="font-bold text-indigo-300 flex items-center gap-2">
+                                <span>
+                                    👁️ View From Seat {lastSelectedSeat.seat_code} (
+                                    {lastSelectedSeat.tier} Tier)
+                                </span>
+                                {isBestViewSeat(lastSelectedSeat) && (
+                                    <span className="text-[10px] bg-amber-400 text-slate-950 font-extrabold px-2 py-0.2 rounded-full">
+                                        ⭐ SWEET-SPOT
+                                    </span>
+                                )}
+                            </div>
+                            <div className="text-slate-300">
+                                📐 {viewProfile.distance} • 🔊 {viewProfile.acoustics}
+                            </div>
+                        </div>
+                        <div className="text-[11px] font-semibold text-emerald-300 bg-slate-950/70 px-3 py-1.5 rounded-lg border border-slate-800">
+                            ✨ {viewProfile.perks}
+                        </div>
+                    </div>
+                )}
+
                 {/* TRANSPARENT CHECKOUT BAR FOR SELECTED SEATS */}
                 <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4 mb-6">
                     <div>
@@ -358,7 +450,7 @@ export default function SeatMap({
                             ⏳ Active Pending Holds (5-Minute TTL Checkout)
                         </h3>
 
-                        { (pendingBookings.length > 0 || heldCount > 0) && onForceExpireHolds && (
+                        {(pendingBookings.length > 0 || heldCount > 0) && onForceExpireHolds && (
                             <button
                                 onClick={onForceExpireHolds}
                                 className="px-3 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-slate-950 border border-amber-500/40 text-[11px] font-bold transition cursor-pointer"
@@ -481,6 +573,7 @@ export default function SeatMap({
 
     function renderSeatButton(seat) {
         const isSelected = selectedSeatIds.includes(seat.show_seat_id);
+        const isWatched = watchedSeatIds.includes(seat.show_seat_id);
         const liveSeatSec = Math.max(0, Number(seat.seconds_left || 0) - tickOffset);
         const bestView = isBestViewSeat(seat);
         const dimmedByBestViewFilter = tierFilter === 'BEST_VIEW' && !bestView;
@@ -491,8 +584,9 @@ export default function SeatMap({
             seatStyle =
                 'bg-indigo-600 border-indigo-400 text-white ring-2 ring-indigo-400/40 cursor-pointer';
         } else if (seat.status === 'HELD') {
-            seatStyle =
-                'bg-amber-500/20 border-amber-500/70 text-amber-300 cursor-not-allowed';
+            seatStyle = isWatched
+                ? 'bg-cyan-500/25 border-cyan-400 text-cyan-200 ring-2 ring-cyan-400/40 cursor-pointer'
+                : 'bg-amber-500/20 border-amber-500/70 text-amber-300 hover:border-cyan-400 cursor-pointer';
         } else if (seat.status === 'BOOKED') {
             seatStyle =
                 'bg-rose-950/50 border-rose-800/60 text-rose-400/60 cursor-not-allowed opacity-70';
@@ -502,14 +596,20 @@ export default function SeatMap({
             seat.status === 'HELD'
                 ? `Seat ${seat.seat_code} HELD by ${seat.held_by_name || 'User'} (${formatMMSS(
                       liveSeatSec
-                  )} left) • Version v${seat.version}`
+                  )} left) • Click to 🔔 Watch & Auto-Select on Expiry`
                 : `Seat ${seat.seat_code} (${seat.tier}) • ₹${seat.price} • ${seat.status} • Version v${seat.version}`;
 
         return (
             <button
                 key={seat.show_seat_id}
-                onClick={() => onToggleSeat(seat.show_seat_id)}
-                disabled={seat.status !== 'AVAILABLE'}
+                onClick={() => {
+                    if (seat.status === 'AVAILABLE') {
+                        onToggleSeat(seat.show_seat_id);
+                    } else if (seat.status === 'HELD') {
+                        toggleWatchHeldSeat(seat.show_seat_id);
+                    }
+                }}
+                disabled={seat.status === 'BOOKED'}
                 title={tooltipText}
                 className={`p-1.5 rounded-lg border text-center transition flex flex-col items-center justify-center ${seatStyle} ${
                     dimmedByBestViewFilter ? 'opacity-25' : ''
@@ -525,7 +625,9 @@ export default function SeatMap({
                     {isSelected
                         ? 'SELECTED'
                         : seat.status === 'HELD'
-                        ? `⏳ ${formatMMSS(liveSeatSec)}`
+                        ? isWatched
+                            ? '🔔 WATCHING'
+                            : `⏳ ${formatMMSS(liveSeatSec)}`
                         : seat.status}
                 </span>
             </button>

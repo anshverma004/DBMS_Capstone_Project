@@ -106,7 +106,76 @@ export async function getShowById(req, res) {
     }
 }
 
-// 3. POST /api/shows/:showId/reset (Calls Stored Procedure sp_reset_show_demo)
+// 3. POST /api/shows/create (Inserts Movie + Show and calls Stored Procedure sp_generate_show_seats)
+export async function createMovieAndShow(req, res) {
+    const {
+        title,
+        genre = 'Action / Sci-Fi',
+        durationMins = 160,
+        screenId = 1,
+        isFlashSale = true
+    } = req.body;
+
+    if (!title || !String(title).trim()) {
+        return res.status(400).json({ error: 'Movie title is required.' });
+    }
+
+    const conn = await pool.getConnection();
+    try {
+        await conn.beginTransaction();
+
+        // 1. Insert new movie into movies table
+        const [movieRes] = await conn.query(
+            `INSERT INTO movies (title, genre, duration_mins) VALUES (?, ?, ?)`,
+            [String(title).trim(), String(genre).trim(), Math.max(30, Number(durationMins) || 150)]
+        );
+        const newMovieId = movieRes.insertId;
+
+        // 2. Get auditorium capacity from screens table
+        const [screens] = await conn.query(
+            `SELECT total_capacity FROM screens WHERE screen_id = ?`,
+            [Number(screenId) || 1]
+        );
+        const totalCapacity = screens[0]?.total_capacity || 60;
+
+        // 3. Insert new showtime into shows table (unique timestamp per show)
+        const [showRes] = await conn.query(
+            `INSERT INTO shows (
+                movie_id, screen_id, show_datetime, is_flash_sale, sale_start_time, available_seats, status
+             ) VALUES (
+                ?, ?, DATE_ADD(NOW(), INTERVAL ? MINUTE), ?, NOW(), ?, 'OPEN'
+             )`,
+            [
+                newMovieId,
+                Number(screenId) || 1,
+                60 + Math.floor(Math.random() * 5000),
+                Boolean(isFlashSale),
+                totalCapacity
+            ]
+        );
+        const newShowId = showRes.insertId;
+
+        await conn.commit();
+
+        // 4. Call Stored Procedure sp_generate_show_seats to populate all auditorium seats
+        await pool.query('CALL sp_generate_show_seats(?)', [newShowId]);
+
+        const updatedData = await fetchShowDetailsData(newShowId);
+        req.io?.emit('show_updated', updatedData);
+
+        res.status(201).json({
+            message: `🎬 Created "${String(title).trim()}" & generated ${totalCapacity} seats via sp_generate_show_seats(${newShowId})!`,
+            showId: newShowId
+        });
+    } catch (err) {
+        await conn.rollback();
+        res.status(500).json({ error: err.message });
+    } finally {
+        conn.release();
+    }
+}
+
+// 4. POST /api/shows/:showId/reset (Calls Stored Procedure sp_reset_show_demo)
 export async function resetShowDemo(req, res) {
     try {
         const showId = Number(req.params.showId);
@@ -121,7 +190,7 @@ export async function resetShowDemo(req, res) {
     }
 }
 
-// 4. POST /api/shows/:showId/force-expire (Fast-forwards 5-min TTL timer for instant viva demo)
+// 5. POST /api/shows/:showId/force-expire (Fast-forwards 5-min TTL timer for instant viva demo)
 export async function forceExpireHolds(req, res) {
     try {
         const showId = Number(req.params.showId);
@@ -154,7 +223,7 @@ export async function forceExpireHolds(req, res) {
     }
 }
 
-// 5. POST /api/shows/:showId/toggle-flash-sale (Toggles Flash-Sale pricing in MySQL)
+// 6. POST /api/shows/:showId/toggle-flash-sale (Toggles Flash-Sale pricing in MySQL)
 export async function toggleFlashSale(req, res) {
     try {
         const showId = Number(req.params.showId);
@@ -173,7 +242,6 @@ export async function toggleFlashSale(req, res) {
             [newFlashState, showId]
         );
 
-        // Update seat tier prices in show_seats based on Flash-Sale vs Regular mode
         await pool.query(
             `UPDATE show_seats
              SET price = CASE
@@ -198,7 +266,7 @@ export async function toggleFlashSale(req, res) {
     }
 }
 
-// 6. POST /api/shows/:showId/crowd-fill (Simulates realistic theater occupancy by booking random available seats)
+// 7. POST /api/shows/:showId/crowd-fill (Simulates realistic theater occupancy by booking random available seats)
 export async function simulateCrowdFill(req, res) {
     const showId = Number(req.params.showId);
     const count = Math.min(25, Math.max(1, Number(req.body?.count) || 12));

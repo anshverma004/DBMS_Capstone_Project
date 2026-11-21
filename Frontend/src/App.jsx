@@ -11,6 +11,7 @@ import {
     confirmBookingApi,
     cancelBookingApi,
     simulateRaceApi,
+    createMovieShowApi,
     resetShowApi,
     forceExpireHoldsApi,
     toggleFlashSaleApi,
@@ -80,6 +81,7 @@ export default function App() {
     const [selectedSeatIds, setSelectedSeatIds] = useState([]);
 
     const [simulationResult, setSimulationResult] = useState(null);
+    const [sampleResults, setSampleResults] = useState([]);
     const [message, setMessage] = useState('');
     const [paymentModalBooking, setPaymentModalBooking] = useState(null);
 
@@ -129,6 +131,7 @@ export default function App() {
     useEffect(() => {
         setSelectedSeatIds([]);
         setSimulationResult(null);
+        setSampleResults([]);
         loadShowData(selectedShowId);
     }, [selectedShowId]);
 
@@ -251,6 +254,18 @@ export default function App() {
         }
     }
 
+    // Create New Movie & Showtime (Calls Stored Procedure sp_generate_show_seats)
+    async function handleCreateMovieShow(payload) {
+        try {
+            const res = await createMovieShowApi(payload);
+            setMessage(res.message);
+            const showsData = await fetchShows();
+            setShows(showsData);
+        } catch (err) {
+            setMessage(`Error: ${err.message}`);
+        }
+    }
+
     // Fast-forward 5-minute TTL timer for instant viva demo
     async function handleForceExpireHolds(targetShowId = selectedShowId) {
         try {
@@ -295,6 +310,7 @@ export default function App() {
                 reverseOrderDeadlockTest
             });
             setSimulationResult(res.summary);
+            setSampleResults(res.sampleResults || []);
             setMessage(
                 reverseOrderDeadlockTest
                     ? `Deadlock Attack Completed: 0 Deadlocks, ${res.summary.succeededCount} Group Winner, ${res.summary.preventedDoubleBookings} Rolled Back!`
@@ -314,6 +330,7 @@ export default function App() {
             setMessage(res.message);
             setSelectedSeatIds([]);
             setSimulationResult(null);
+            setSampleResults([]);
             await loadShowData(selectedShowId);
         } catch (err) {
             setMessage(`Error: ${err.message}`);
@@ -437,6 +454,7 @@ export default function App() {
                         auditLogs={auditLogs}
                         onSimulateRace={handleSimulateRace}
                         simulationResult={simulationResult}
+                        sampleResults={sampleResults}
                         onBackToTheaters={() => setCurrentPage('theaters')}
                         onGoToMyBookings={() => setCurrentPage('mybookings')}
                     />
@@ -470,6 +488,7 @@ export default function App() {
                 {currentPage === 'admin' && (
                     <AdminPage
                         shows={shows}
+                        onCreateMovieShow={handleCreateMovieShow}
                         onToggleFlashSale={handleToggleFlashSale}
                         onCrowdFill={handleCrowdFill}
                         onForceExpire={handleForceExpireHolds}

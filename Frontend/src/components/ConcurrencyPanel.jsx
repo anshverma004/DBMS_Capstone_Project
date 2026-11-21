@@ -5,13 +5,15 @@ export default function ConcurrencyPanel({
     seats,
     auditLogs,
     onSimulateRace,
-    simulationResult
+    simulationResult,
+    sampleResults = []
 }) {
     const availableSeats = seats.filter((s) => s.status === 'AVAILABLE');
     const [targetSeatId, setTargetSeatId] = useState('');
     const [concurrentCount, setConcurrentCount] = useState(50);
     const [testMode, setTestMode] = useState('SINGLE'); // 'SINGLE' | 'DEADLOCK_PAIR'
     const [benchmarkHistory, setBenchmarkHistory] = useState([]);
+    const [seatFilter, setSeatFilter] = useState('');
 
     const selectedId = Number(targetSeatId) || availableSeats[0]?.show_seat_id || '';
     const secondSeat =
@@ -42,6 +44,11 @@ export default function ConcurrencyPanel({
             onSimulateRace([Number(selectedId)], concurrentCount, false);
         }
     }
+
+    const filteredAuditLogs = auditLogs.filter((log) => {
+        if (!seatFilter.trim()) return true;
+        return log.seat_code?.toLowerCase().includes(seatFilter.trim().toLowerCase());
+    });
 
     return (
         <div className="space-y-6">
@@ -147,8 +154,8 @@ export default function ConcurrencyPanel({
 
                 {/* 2. Latest Simulation Scoreboard */}
                 {simulationResult && (
-                    <div className="mt-4 bg-slate-950 border border-slate-800 rounded-xl p-4">
-                        <div className="flex items-center justify-between mb-2.5">
+                    <div className="mt-4 bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
+                        <div className="flex items-center justify-between">
                             <h4 className="text-xs font-bold uppercase tracking-wider text-amber-400">
                                 Latest Result ({simulationResult.lockModeUsed})
                             </h4>
@@ -182,6 +189,36 @@ export default function ConcurrencyPanel({
                                 </span>
                             </div>
                         </div>
+
+                        {/* Per-Request Thread Outcome Feed */}
+                        {sampleResults.length > 0 && (
+                            <div className="pt-2 border-t border-slate-800">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
+                                    🧵 Per-Thread Race Execution Feed (Sample 15 Threads)
+                                </span>
+                                <div className="max-h-36 overflow-y-auto space-y-1 pr-1 text-[11px] font-mono">
+                                    {sampleResults.map((r) => (
+                                        <div
+                                            key={r.requestNumber}
+                                            className={`px-2.5 py-1 rounded flex items-center justify-between gap-2 ${
+                                                r.status === 'SUCCESS'
+                                                    ? 'bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 font-bold'
+                                                    : 'bg-slate-900/90 text-slate-400'
+                                            }`}
+                                        >
+                                            <span>
+                                                Req #{r.requestNumber} ({r.user})
+                                            </span>
+                                            <span>
+                                                {r.status === 'SUCCESS'
+                                                    ? `✅ WON (Booking #${r.bookingId})`
+                                                    : `❌ 409 (${r.reason || 'Locked'})`}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -241,9 +278,9 @@ export default function ConcurrencyPanel({
                 )}
             </div>
 
-            {/* 4. MySQL Trigger Audit Logs + CSV Export */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
-                <div className="flex items-center justify-between gap-2 mb-3">
+            {/* 4. MySQL Trigger Audit Logs + Seat Filter + CSV Export */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                     <h3 className="text-sm font-bold text-white">
                         MySQL Trigger Audit Logs (seat_audit_logs)
                     </h3>
@@ -256,6 +293,26 @@ export default function ConcurrencyPanel({
                         </button>
                     )}
                 </div>
+
+                {/* Seat-Specific Lifecycle Filter */}
+                <div className="flex items-center gap-2">
+                    <input
+                        type="text"
+                        value={seatFilter}
+                        onChange={(e) => setSeatFilter(e.target.value)}
+                        placeholder="🔍 Filter logs by Seat Code (e.g. A1, C5, E8)..."
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                    />
+                    {seatFilter && (
+                        <button
+                            onClick={() => setSeatFilter('')}
+                            className="text-xs text-slate-400 hover:text-white cursor-pointer"
+                        >
+                            ✕
+                        </button>
+                    )}
+                </div>
+
                 <div className="overflow-x-auto max-h-80 overflow-y-auto rounded-lg border border-slate-800">
                     <table className="w-full text-left text-xs text-slate-300">
                         <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] sticky top-0">
@@ -269,7 +326,7 @@ export default function ConcurrencyPanel({
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-800/80">
-                            {auditLogs.map((log) => (
+                            {filteredAuditLogs.map((log) => (
                                 <tr key={log.log_id} className="hover:bg-slate-800/50">
                                     <td className="px-3 py-2 font-mono text-slate-500">#{log.log_id}</td>
                                     <td className="px-3 py-2 font-bold text-white">{log.seat_code}</td>

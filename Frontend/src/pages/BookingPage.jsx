@@ -17,6 +17,7 @@ export default function BookingPage({
     auditLogs,
     onSimulateRace,
     simulationResult,
+    sampleResults,
     onBackToTheaters,
     onGoToMyBookings
 }) {
@@ -76,6 +77,7 @@ export default function BookingPage({
                         auditLogs={auditLogs}
                         onSimulateRace={onSimulateRace}
                         simulationResult={simulationResult}
+                        sampleResults={sampleResults}
                     />
                 </div>
             </div>

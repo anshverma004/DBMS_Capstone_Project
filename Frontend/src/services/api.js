@@ -128,6 +128,12 @@ export const simulateRaceApi = (showId, payload) =>
         body: JSON.stringify(payload)
     });
 
+export const createMovieShowApi = (payload) =>
+    request('/shows/create', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+    });
+
 export const resetShowApi = (showId) =>
     request(`/shows/${showId}/reset`, { method: 'POST' });
 
