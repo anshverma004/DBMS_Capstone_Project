@@ -5,7 +5,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 
 import apiRoutes from './routes/apiRoutes.js';
-import { releaseExpiredHolds } from './controllers/showController.js';
+import { releaseExpiredHolds } from './services/seatHoldService.js';
 
 dotenv.config();
 

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { DATE_TABS, enrichShow } from '../constants/theaterData';
+import AuditoriumSpecsModal from '../components/theater/AuditoriumSpecsModal';
 
 export default function TheaterSearchPage({
     shows,
@@ -32,7 +33,6 @@ export default function TheaterSearchPage({
 
     return (
         <div className="space-y-6 py-2">
-            {/* 1. PAGE HEADER, DATE TABS & CITY / THEATER SEARCH BAR */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-5">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <div>
@@ -48,7 +48,6 @@ export default function TheaterSearchPage({
                         </p>
                     </div>
 
-                    {/* BookMyShow Date Picker Tabs */}
                     <div className="flex items-center gap-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
                         {DATE_TABS.map((d) => (
                             <button
@@ -105,7 +104,6 @@ export default function TheaterSearchPage({
                 </div>
             </div>
 
-            {/* 2. LIST OF THEATERS WITH SHOWTIME SLOT PILLS */}
             <div className="space-y-4">
                 <div className="flex items-center justify-between">
                     <h2 className="text-base font-bold text-white">
@@ -139,7 +137,6 @@ export default function TheaterSearchPage({
                                 className="bg-slate-900 border border-slate-800 hover:border-rose-500/50 rounded-2xl p-6 shadow-xl transition"
                             >
                                 <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-                                    {/* Left: Theater Venue Info */}
                                     <div className="space-y-2.5 flex-1">
                                         <div className="flex flex-wrap items-center gap-2">
                                             <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
@@ -191,7 +188,6 @@ export default function TheaterSearchPage({
                                         </div>
                                     </div>
 
-                                    {/* Right: BookMyShow Interactive Showtime Slot Pills */}
                                     <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 w-full lg:w-auto min-w-[340px] space-y-3">
                                         <div className="flex items-center justify-between text-xs">
                                             <span className="text-slate-400 font-semibold uppercase text-[10px] tracking-wider">
@@ -236,95 +232,11 @@ export default function TheaterSearchPage({
                 )}
             </div>
 
-            {/* Auditorium & Tier Pricing Specification Modal */}
-            {specsModalShow && (
-                <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl">
-                        <div className="px-6 py-4 bg-gradient-to-r from-rose-600 to-indigo-700 flex items-center justify-between">
-                            <div>
-                                <h3 className="text-base font-extrabold text-white">
-                                    {specsModalShow.theaterName}
-                                </h3>
-                                <p className="text-xs text-rose-100">
-                                    {specsModalShow.screen_name} • {specsModalShow.format}
-                                </p>
-                            </div>
-                            <button
-                                onClick={() => setSpecsModalShow(null)}
-                                className="text-white/80 hover:text-white bg-black/20 px-2.5 py-1 rounded-lg cursor-pointer"
-                            >
-                                ✕
-                            </button>
-                        </div>
-
-                        <div className="p-6 space-y-4 text-xs">
-                            <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-1.5">
-                                <div className="text-sm font-extrabold text-white">
-                                    🎬 {specsModalShow.movie_title}
-                                </div>
-                                <div className="text-slate-400">
-                                    {specsModalShow.tagline}
-                                </div>
-                                <div className="text-indigo-300 pt-1">
-                                    📍 {specsModalShow.mallAddress}
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <div className="font-bold text-slate-300 uppercase text-[10px] tracking-wider">
-                                    Auditorium Seat Tier Matrix ({specsModalShow.total_capacity} Total Seats)
-                                </div>
-                                <div className="grid grid-cols-3 gap-2 text-center">
-                                    <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
-                                        <span className="text-cyan-400 font-bold block">
-                                            CLASSIC
-                                        </span>
-                                        <span className="text-[11px] text-slate-400 block">
-                                            Rows A–B
-                                        </span>
-                                        <span className="text-sm font-extrabold text-white mt-1 block">
-                                            ₹{specsModalShow.is_flash_sale ? '99' : '180'}
-                                        </span>
-                                    </div>
-                                    <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
-                                        <span className="text-indigo-300 font-bold block">
-                                            PRIME
-                                        </span>
-                                        <span className="text-[11px] text-slate-400 block">
-                                            Rows C–D
-                                        </span>
-                                        <span className="text-sm font-extrabold text-white mt-1 block">
-                                            ₹{specsModalShow.is_flash_sale ? '149' : '280'}
-                                        </span>
-                                    </div>
-                                    <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
-                                        <span className="text-amber-300 font-bold block">
-                                            RECLINER
-                                        </span>
-                                        <span className="text-[11px] text-slate-400 block">
-                                            Rows E–F
-                                        </span>
-                                        <span className="text-sm font-extrabold text-white mt-1 block">
-                                            ₹{specsModalShow.is_flash_sale ? '249' : '450'}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <button
-                                onClick={() => {
-                                    const id = specsModalShow.show_id;
-                                    setSpecsModalShow(null);
-                                    onSelectTheaterShow(id, specsModalShow.showTimeLabel);
-                                }}
-                                className="w-full py-3 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl cursor-pointer"
-                            >
-                                🎟️ Enter Auditorium &amp; Select Seats →
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <AuditoriumSpecsModal
+                specsModalShow={specsModalShow}
+                onClose={() => setSpecsModalShow(null)}
+                onSelectTheaterShow={onSelectTheaterShow}
+            />
         </div>
     );
 }

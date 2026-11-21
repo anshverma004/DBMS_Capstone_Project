@@ -2,9 +2,9 @@ import express from 'express';
 import {
     holdSeats,
     confirmBooking,
-    cancelBooking,
-    simulateConcurrencyRace
+    cancelBooking
 } from '../controllers/bookingController.js';
+import { simulateConcurrencyRace } from '../controllers/simulationController.js';
 
 const router = express.Router();
 

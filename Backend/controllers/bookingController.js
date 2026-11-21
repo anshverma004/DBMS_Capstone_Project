@@ -1,126 +1,6 @@
 import pool from '../config/db.js';
-import { releaseExpiredHolds, fetchShowDetailsData } from './showController.js';
-
-// Core ACID Transaction: Hold Seats (Pessimistic or Optimistic)
-async function holdSeatsTransaction({ showId, userId, seatIds, lockMode = 'PESSIMISTIC' }) {
-    // 1. Sort seat IDs in ascending order so two users never deadlock
-    const sortedSeatIds = [...new Set(seatIds.map(Number))].sort((a, b) => a - b);
-    if (sortedSeatIds.length === 0) {
-        const err = new Error('Please select at least one seat.');
-        err.status = 400;
-        throw err;
-    }
-
-    const conn = await pool.getConnection();
-    try {
-        await conn.beginTransaction();
-
-        let seats;
-        if (lockMode === 'PESSIMISTIC') {
-            // PESSIMISTIC LOCKING: Lock the requested seat rows in MySQL
-            const [rows] = await conn.query(
-                `SELECT show_seat_id, seat_code, price, status, version
-         FROM show_seats
-         WHERE show_id = ? AND show_seat_id IN (?)
-         ORDER BY show_seat_id ASC
-         FOR UPDATE`,
-                [showId, sortedSeatIds]
-            );
-            seats = rows;
-
-            for (const seat of seats) {
-                if (seat.status !== 'AVAILABLE') {
-                    const err = new Error(`Seat ${seat.seat_code} is already ${seat.status}.`);
-                    err.status = 409;
-                    throw err;
-                }
-            }
-
-            await conn.query(
-                `UPDATE show_seats
-         SET status = 'HELD',
-             held_by_user_id = ?,
-             held_until = DATE_ADD(NOW(), INTERVAL 5 MINUTE),
-             version = version + 1
-         WHERE show_seat_id IN (?)`,
-                [userId, sortedSeatIds]
-            );
-        } else {
-            // OPTIMISTIC LOCKING: Check version numbers without holding row locks
-            const [rows] = await conn.query(
-                `SELECT show_seat_id, seat_code, price, status, version
-         FROM show_seats
-         WHERE show_id = ? AND show_seat_id IN (?)
-         ORDER BY show_seat_id ASC`,
-                [showId, sortedSeatIds]
-            );
-            seats = rows;
-
-            for (const seat of seats) {
-                if (seat.status !== 'AVAILABLE') {
-                    const err = new Error(`Seat ${seat.seat_code} is already ${seat.status}.`);
-                    err.status = 409;
-                    throw err;
-                }
-
-                const [updateResult] = await conn.query(
-                    `UPDATE show_seats
-           SET status = 'HELD',
-               held_by_user_id = ?,
-               held_until = DATE_ADD(NOW(), INTERVAL 5 MINUTE),
-               version = version + 1
-           WHERE show_seat_id = ? AND status = 'AVAILABLE' AND version = ?`,
-                    [userId, seat.show_seat_id, seat.version]
-                );
-
-                if (updateResult.affectedRows !== 1) {
-                    const err = new Error(`Optimistic version conflict on Seat ${seat.seat_code}.`);
-                    err.status = 409;
-                    throw err;
-                }
-            }
-        }
-
-        // Create PENDING booking and map seats in booking_seats
-        const totalAmount = seats.reduce((sum, s) => sum + Number(s.price), 0);
-
-        const [bookingResult] = await conn.query(
-            `INSERT INTO bookings (user_id, show_id, total_amount, booking_status, lock_mode, expires_at)
-       VALUES (?, ?, ?, 'PENDING', ?, DATE_ADD(NOW(), INTERVAL 5 MINUTE))`,
-            [userId, showId, totalAmount, lockMode]
-        );
-
-        const bookingId = bookingResult.insertId;
-
-        for (const seat of seats) {
-            await conn.query(
-                `INSERT INTO booking_seats (booking_id, show_seat_id, price_at_booking)
-         VALUES (?, ?, ?)`,
-                [bookingId, seat.show_seat_id, seat.price]
-            );
-        }
-
-        await conn.commit();
-
-        return {
-            bookingId,
-            userId,
-            showId,
-            seatCodes: seats.map((s) => s.seat_code),
-            totalAmount,
-            lockMode
-        };
-    } catch (err) {
-        await conn.rollback();
-        if (err.code === 'ER_LOCK_DEADLOCK' || err.code === 'ER_LOCK_WAIT_TIMEOUT') {
-            err.status = 409;
-            err.message = 'Concurrent transaction conflict prevented double-booking.';
-        }
-        throw err;
-    } finally {
-        conn.release();
-    }
-}
+import { releaseExpiredHolds, holdSeatsTransaction } from '../services/seatHoldService.js';
+import { fetchShowDetailsData } from '../services/showQueryService.js';
 
 // 1. POST /api/shows/:showId/hold
 export async function holdSeats(req, res) {
@@ -171,9 +51,9 @@ export async function confirmBooking(req, res) {
 
         await conn.query(
             `UPDATE show_seats ss
-       JOIN booking_seats bs ON ss.show_seat_id = bs.show_seat_id
-       SET ss.status = 'BOOKED', ss.held_until = NULL, ss.version = ss.version + 1
-       WHERE bs.booking_id = ?`,
+             JOIN booking_seats bs ON ss.show_seat_id = bs.show_seat_id
+             SET ss.status = 'BOOKED', ss.held_until = NULL, ss.version = ss.version + 1
+             WHERE bs.booking_id = ?`,
             [bookingId]
         );
 
@@ -222,9 +102,9 @@ export async function cancelBooking(req, res) {
 
         await conn.query(
             `UPDATE show_seats ss
-       JOIN booking_seats bs ON ss.show_seat_id = bs.show_seat_id
-       SET ss.status = 'AVAILABLE', ss.held_by_user_id = NULL, ss.held_until = NULL, ss.version = ss.version + 1
-       WHERE bs.booking_id = ?`,
+             JOIN booking_seats bs ON ss.show_seat_id = bs.show_seat_id
+             SET ss.status = 'AVAILABLE', ss.held_by_user_id = NULL, ss.held_until = NULL, ss.version = ss.version + 1
+             WHERE bs.booking_id = ?`,
             [bookingId]
         );
 
@@ -248,79 +128,5 @@ export async function cancelBooking(req, res) {
         res.status(500).json({ error: err.message });
     } finally {
         conn.release();
-    }
-}
-
-// 4. POST /api/shows/:showId/simulate-race (Single-Seat Stampede & Multi-Seat Reverse-Order Deadlock Test)
-export async function simulateConcurrencyRace(req, res) {
-    try {
-        await releaseExpiredHolds();
-        const showId = Number(req.params.showId);
-        const {
-            seatIds,
-            concurrentUsers = 50,
-            lockMode = 'PESSIMISTIC',
-            reverseOrderDeadlockTest = false
-        } = req.body;
-
-        const [users] = await pool.query('SELECT user_id, full_name FROM users');
-        const startTime = Date.now();
-
-        // Fire all N requests simultaneously at the exact same millisecond
-        // If reverseOrderDeadlockTest is enabled with 2+ seats, even requests send [A, B] and odd requests send [B, A]
-        const requests = Array.from({ length: Number(concurrentUsers) }, (_, idx) => {
-            const randomUser = users[idx % users.length];
-            const orderedIds =
-                reverseOrderDeadlockTest && Array.isArray(seatIds) && seatIds.length > 1 && idx % 2 === 1
-                    ? [...seatIds].reverse()
-                    : seatIds;
-
-            return holdSeatsTransaction({
-                showId,
-                userId: randomUser.user_id,
-                seatIds: orderedIds,
-                lockMode
-            })
-                .then((resData) => ({
-                    requestNumber: idx + 1,
-                    user: randomUser.full_name,
-                    status: 'SUCCESS',
-                    bookingId: resData.bookingId
-                }))
-                .catch((err) => ({
-                    requestNumber: idx + 1,
-                    user: randomUser.full_name,
-                    status: 'REJECTED_409',
-                    reason: err.message
-                }));
-        });
-
-        const results = await Promise.all(requests);
-        const durationMs = Date.now() - startTime;
-
-        const winners = results.filter((r) => r.status === 'SUCCESS');
-        const rejected = results.filter((r) => r.status !== 'SUCCESS');
-
-        const updatedData = await fetchShowDetailsData(showId);
-        req.io.emit('show_updated', updatedData);
-
-        res.json({
-            summary: {
-                totalConcurrentRequests: results.length,
-                lockModeUsed: lockMode,
-                testType:
-                    reverseOrderDeadlockTest && seatIds?.length > 1
-                        ? 'DEADLOCK_PAIR_TEST'
-                        : 'SINGLE_SEAT_RACE',
-                succeededCount: winners.length,
-                preventedDoubleBookings: rejected.length,
-                deadlocksOccurred: 0,
-                winner: winners[0] || null,
-                durationMs
-            },
-            sampleResults: results.slice(0, 15)
-        });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
     }
 }
