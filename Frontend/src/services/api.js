@@ -20,3 +20,4 @@ export {
     runCustomSqlApi
 } from './bookingService';
 export { exportAuditLogsToCsv } from './csvExportService';
+export { openPrintableTicketPdf } from './ticketPdfService';

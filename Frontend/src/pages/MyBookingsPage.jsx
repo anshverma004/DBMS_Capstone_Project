@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { openPrintableTicketPdf } from '../services/api';
 import GateQrVerifyModal from '../components/bookings/GateQrVerifyModal';
 
 export default function MyBookingsPage({
@@ -36,12 +37,16 @@ export default function MyBookingsPage({
                 </div>
 
                 <div className="flex items-center gap-2.5">
-                    <button
-                        onClick={() => window.print()}
-                        className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white transition cursor-pointer"
-                    >
-                        🖨️ Print / Save Tickets PDF
-                    </button>
+                    {myBookings.length > 0 && (
+                        <button
+                            onClick={() =>
+                                openPrintableTicketPdf(myBookings, currentShow, loggedInUser)
+                            }
+                            className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white shadow-lg shadow-indigo-600/25 transition cursor-pointer"
+                        >
+                            🖨️ Print / Save All Tickets PDF
+                        </button>
+                    )}
                     <button
                         onClick={onBackToTheaters}
                         className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700 transition cursor-pointer"
@@ -186,18 +191,32 @@ export default function MyBookingsPage({
                                 )}
 
                                 {isConfirmed && (
-                                    <div className="flex items-center justify-between pt-3 border-t border-slate-800/80">
-                                        <button
-                                            onClick={() => setInspectedTicket(b)}
-                                            className="text-[11px] font-bold text-emerald-400 hover:text-emerald-300 cursor-pointer"
-                                        >
-                                            📱 Open Gate QR Scanner Proof →
-                                        </button>
+                                    <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-800/80">
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() =>
+                                                    openPrintableTicketPdf(
+                                                        b,
+                                                        currentShow,
+                                                        loggedInUser
+                                                    )
+                                                }
+                                                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition cursor-pointer"
+                                            >
+                                                🖨️ Print / Save PDF
+                                            </button>
+                                            <button
+                                                onClick={() => setInspectedTicket(b)}
+                                                className="px-2.5 py-1.5 bg-emerald-500/15 hover:bg-emerald-500 text-emerald-300 hover:text-slate-950 border border-emerald-500/30 text-xs font-bold rounded-xl transition cursor-pointer"
+                                            >
+                                                📱 Gate QR
+                                            </button>
+                                        </div>
                                         <button
                                             onClick={() => onCancelBooking(b.booking_id)}
-                                            className="px-3.5 py-1.5 bg-rose-500/15 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 text-xs font-bold rounded-xl transition cursor-pointer"
+                                            className="px-3 py-1.5 bg-rose-500/15 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 text-xs font-bold rounded-xl transition cursor-pointer"
                                         >
-                                            🔄 Cancel Ticket &amp; Claim Refund
+                                            🔄 Refund
                                         </button>
                                     </div>
                                 )}
