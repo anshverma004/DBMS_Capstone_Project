@@ -17,16 +17,23 @@ import {
 
 import Navbar from './components/Navbar';
 import LandingPage from './components/LandingPage';
-import ShowSelector from './components/ShowSelector';
+import SignupPage from './components/SignupPage';
+import LoginPage from './components/LoginPage';
+import TheaterSearchPage from './components/TheaterSearchPage';
 import SeatMap from './components/SeatMap';
 import ConcurrencyPanel from './components/ConcurrencyPanel';
-import AuthModal from './components/AuthModal';
 
 export default function App() {
-    const [activeView, setActiveView] = useState('landing');
+    // 5 Separate Pages: 'landing' -> 'signup' -> 'login' -> 'theaters' -> 'booking'
+    const [currentPage, setCurrentPage] = useState('landing');
+    const [loggedInUser, setLoggedInUser] = useState(null);
+    const [prefilledEmail, setPrefilledEmail] = useState('');
+
+    // Theater search state
     const [selectedCity, setSelectedCity] = useState('ALL');
     const [searchQuery, setSearchQuery] = useState('');
 
+    // Database & booking state
     const [users, setUsers] = useState([]);
     const [selectedUserId, setSelectedUserId] = useState(1);
     const [lockMode, setLockMode] = useState('PESSIMISTIC');
@@ -41,10 +48,6 @@ export default function App() {
 
     const [simulationResult, setSimulationResult] = useState(null);
     const [message, setMessage] = useState('');
-
-    // Auth & My Tickets Modal State
-    const [authModalOpen, setAuthModalOpen] = useState(false);
-    const [authModalMode, setAuthModalMode] = useState('login'); // 'login' | 'signup' | 'tickets'
 
     // Load users and shows on startup
     async function loadInitialData() {
@@ -81,7 +84,7 @@ export default function App() {
         loadShowData(selectedShowId);
     }, [selectedShowId]);
 
-    // Listen for real-time Socket.io updates across browser tabs
+    // Real-time Socket.io updates across browser tabs
     useEffect(() => {
         const socket = io(SOCKET_URL);
         socket.on('show_updated', (data) => {
@@ -100,21 +103,7 @@ export default function App() {
         return () => socket.disconnect();
     }, [selectedShowId]);
 
-    // Toggle seat selection
-    function handleToggleSeat(seatId) {
-        setSelectedSeatIds((prev) =>
-            prev.includes(seatId) ? prev.filter((id) => id !== seatId) : [...prev, seatId]
-        );
-    }
-
-    // Navigate from Landing Page to Seat Hall for a chosen show
-    function handleBookShowFromLanding(showId) {
-        setSelectedShowId(Number(showId));
-        setActiveView('booking');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    // Sign Up Handler
+    // Step 1: Sign Up -> Redirects to Login Page!
     async function handleSignupSubmit({ fullName, email }) {
         const res = await signupUserApi({ fullName, email });
         if (res.users) {
@@ -123,22 +112,49 @@ export default function App() {
             const freshUsers = await fetchUsers();
             setUsers(freshUsers);
         }
-        if (res.user) {
-            setSelectedUserId(Number(res.user.user_id));
-        }
-        setMessage(res.message);
+        setPrefilledEmail(email);
+        setMessage('Account created successfully! Please log in below.');
+        setCurrentPage('login');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // Login Handler
+    // Step 2: Log In -> Redirects to Search Theaters in Cities Page!
     async function handleLoginSubmit({ email }) {
         const res = await loginUserApi({ email });
         if (res.user) {
+            setLoggedInUser(res.user);
             setSelectedUserId(Number(res.user.user_id));
         }
-        setMessage(res.message);
+        setMessage(`Welcome, ${res.user?.full_name || email}! Select a theater below to view seats.`);
+        setCurrentPage('theaters');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // 1. Hold selected seats
+    // Log Out -> Returns to Landing Page
+    function handleLogout() {
+        setLoggedInUser(null);
+        setPrefilledEmail('');
+        setSelectedSeatIds([]);
+        setMessage('You have logged out.');
+        setCurrentPage('landing');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Step 3: Click on a Theater -> Opens the Seat Selection & Booking Page!
+    function handleSelectTheaterShow(showId) {
+        setSelectedShowId(Number(showId));
+        setCurrentPage('booking');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Toggle seat selection
+    function handleToggleSeat(seatId) {
+        setSelectedSeatIds((prev) =>
+            prev.includes(seatId) ? prev.filter((id) => id !== seatId) : [...prev, seatId]
+        );
+    }
+
+    // Hold selected seats
     async function handleHoldSeats() {
         try {
             const res = await holdSeatsApi(selectedShowId, {
@@ -154,7 +170,7 @@ export default function App() {
         }
     }
 
-    // 2. Confirm booking payment
+    // Confirm booking payment
     async function handleConfirmBooking(bookingId) {
         try {
             const res = await confirmBookingApi(bookingId);
@@ -165,7 +181,7 @@ export default function App() {
         }
     }
 
-    // 3. Cancel active hold
+    // Cancel active hold
     async function handleCancelBooking(bookingId) {
         try {
             const res = await cancelBookingApi(bookingId);
@@ -176,7 +192,7 @@ export default function App() {
         }
     }
 
-    // 4. Simulate 50 concurrent users attacking the same seat
+    // Simulate 50 concurrent users attacking the same seat
     async function handleSimulateRace(targetSeatId, concurrentUsers) {
         try {
             const res = await simulateRaceApi(selectedShowId, {
@@ -194,7 +210,7 @@ export default function App() {
         }
     }
 
-    // 5. Reset show demo (Calls MySQL Stored Procedure)
+    // Reset show demo (Calls MySQL Stored Procedure)
     async function handleResetShow() {
         try {
             const res = await resetShowApi(selectedShowId);
@@ -208,35 +224,24 @@ export default function App() {
     }
 
     const isError = message.startsWith('Error:');
-    const currentUser = users.find((u) => Number(u.user_id) === Number(selectedUserId));
     const currentShowObj = enrichShow(
         shows.find((s) => Number(s.show_id) === Number(selectedShowId)),
         0
     );
-    const myBookingsCount = bookings.filter(
-        (b) =>
-            Number(b.user_id) === Number(selectedUserId) &&
-            (b.booking_status === 'PENDING' || b.booking_status === 'CONFIRMED')
-    ).length;
 
     return (
         <div className="min-h-screen bg-slate-950 text-slate-100">
             <Navbar
+                currentPage={currentPage}
+                setCurrentPage={setCurrentPage}
+                loggedInUser={loggedInUser}
+                onLogout={handleLogout}
                 users={users}
                 selectedUserId={selectedUserId}
                 setSelectedUserId={setSelectedUserId}
                 lockMode={lockMode}
                 setLockMode={setLockMode}
                 onResetShow={handleResetShow}
-                activeView={activeView}
-                setActiveView={setActiveView}
-                selectedCity={selectedCity}
-                setSelectedCity={setSelectedCity}
-                onOpenAuthModal={(mode) => {
-                    setAuthModalMode(mode);
-                    setAuthModalOpen(true);
-                }}
-                myBookingsCount={myBookingsCount}
             />
 
             <main className="max-w-7xl mx-auto px-6 py-6">
@@ -261,23 +266,85 @@ export default function App() {
                     </div>
                 )}
 
-                {activeView === 'landing' ? (
+                {/* PAGE 1: PUBLIC LANDING PAGE */}
+                {currentPage === 'landing' && (
                     <LandingPage
+                        shows={shows}
+                        loggedInUser={loggedInUser}
+                        onGoToLogin={() => {
+                            setMessage('');
+                            setCurrentPage('login');
+                        }}
+                        onGoToSignup={() => {
+                            setMessage('');
+                            setCurrentPage('signup');
+                        }}
+                        onGoToTheaters={() => {
+                            setMessage('');
+                            setCurrentPage('theaters');
+                        }}
+                    />
+                )}
+
+                {/* PAGE 2: SEPARATE SIGN UP PAGE */}
+                {currentPage === 'signup' && (
+                    <SignupPage
+                        onSignupSubmit={handleSignupSubmit}
+                        onGoToLogin={() => {
+                            setMessage('');
+                            setCurrentPage('login');
+                        }}
+                    />
+                )}
+
+                {/* PAGE 3: SEPARATE LOG IN PAGE */}
+                {currentPage === 'login' && (
+                    <LoginPage
+                        users={users}
+                        prefilledEmail={prefilledEmail}
+                        onLoginSubmit={handleLoginSubmit}
+                        onGoToSignup={() => {
+                            setMessage('');
+                            setCurrentPage('signup');
+                        }}
+                    />
+                )}
+
+                {/* PAGE 4: SEPARATE SEARCH THEATERS IN CITIES & LIST OF THEATERS PAGE */}
+                {currentPage === 'theaters' && (
+                    <TheaterSearchPage
                         shows={shows}
                         selectedCity={selectedCity}
                         setSelectedCity={setSelectedCity}
                         searchQuery={searchQuery}
                         setSearchQuery={setSearchQuery}
-                        onBookShow={handleBookShowFromLanding}
+                        onSelectTheaterShow={handleSelectTheaterShow}
                     />
-                ) : (
-                    <>
-                        <ShowSelector
-                            shows={shows}
-                            selectedShowId={selectedShowId}
-                            onSelectShow={setSelectedShowId}
-                            onBackToLanding={() => setActiveView('landing')}
-                        />
+                )}
+
+                {/* PAGE 5: SEPARATE SEAT SELECTION & BOOKING PAGE (ONLY AFTER CLICKING A THEATER) */}
+                {currentPage === 'booking' && (
+                    <div className="space-y-6">
+                        {/* Back to Theaters Bar */}
+                        <div className="bg-slate-900 border border-slate-800 rounded-2xl px-5 py-3.5 flex flex-wrap items-center justify-between gap-4">
+                            <div>
+                                <span className="text-[11px] font-bold uppercase tracking-wider text-rose-400">
+                                    Step 2 of 2 • Auditorium Seat Selection
+                                </span>
+                                <h2 className="text-base font-extrabold text-white">
+                                    📍 {currentShowObj?.theaterName} —{' '}
+                                    <span className="text-indigo-300">
+                                        {currentShowObj?.movie_title}
+                                    </span>
+                                </h2>
+                            </div>
+                            <button
+                                onClick={() => setCurrentPage('theaters')}
+                                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700 transition cursor-pointer"
+                            >
+                                ← Back to Theaters List
+                            </button>
+                        </div>
 
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                             <div className="lg:col-span-7">
@@ -303,28 +370,9 @@ export default function App() {
                                 />
                             </div>
                         </div>
-                    </>
+                    </div>
                 )}
             </main>
-
-            <AuthModal
-                isOpen={authModalOpen}
-                mode={authModalMode}
-                onClose={() => setAuthModalOpen(false)}
-                users={users}
-                currentUser={currentUser}
-                onSelectUser={(id) => {
-                    setSelectedUserId(Number(id));
-                    const u = users.find((x) => Number(x.user_id) === Number(id));
-                    if (u) setMessage(`Switched active user to ${u.full_name}`);
-                }}
-                onLoginSubmit={handleLoginSubmit}
-                onSignupSubmit={handleSignupSubmit}
-                bookings={bookings}
-                currentShow={currentShowObj}
-                onConfirmBooking={handleConfirmBooking}
-                onCancelBooking={handleCancelBooking}
-            />
         </div>
     );
 }
