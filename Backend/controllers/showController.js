@@ -77,91 +77,7 @@ export async function fetchShowDetailsData(showId) {
     return { show: shows[0] || null, seats, bookings, auditLogs };
 }
 
-// 1. GET /api/users
-export async function getUsers(req, res) {
-    try {
-        const [users] = await pool.query('SELECT * FROM users ORDER BY user_id ASC');
-        res.json(users);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-}
-
-// 2. POST /api/auth/signup (Creates a real user in MySQL users table)
-export async function signupUser(req, res) {
-    try {
-        const { fullName, email } = req.body;
-        if (!fullName || !email) {
-            return res.status(400).json({ error: 'Full name and email are required.' });
-        }
-
-        const cleanName = String(fullName).trim();
-        const cleanEmail = String(email).trim().toLowerCase();
-
-        // Check if email already exists
-        const [existing] = await pool.query(
-            'SELECT * FROM users WHERE LOWER(email) = ?',
-            [cleanEmail]
-        );
-        if (existing.length > 0) {
-            return res.status(409).json({
-                error: 'An account with this email already exists. Please log in instead.'
-            });
-        }
-
-        const [result] = await pool.query(
-            'INSERT INTO users (full_name, email) VALUES (?, ?)',
-            [cleanName, cleanEmail]
-        );
-
-        const [newUserRows] = await pool.query(
-            'SELECT * FROM users WHERE user_id = ?',
-            [result.insertId]
-        );
-
-        const [allUsers] = await pool.query('SELECT * FROM users ORDER BY user_id ASC');
-        req.io?.emit('users_updated', allUsers);
-
-        res.status(201).json({
-            message: `Welcome to BookMyFlash, ${cleanName}!`,
-            user: newUserRows[0],
-            users: allUsers
-        });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-}
-
-// 3. POST /api/auth/login (Authenticates an existing user from MySQL users table)
-export async function loginUser(req, res) {
-    try {
-        const { email } = req.body;
-        if (!email) {
-            return res.status(400).json({ error: 'Please enter your email address.' });
-        }
-
-        const cleanEmail = String(email).trim().toLowerCase();
-        const [rows] = await pool.query(
-            'SELECT * FROM users WHERE LOWER(email) = ?',
-            [cleanEmail]
-        );
-
-        if (rows.length === 0) {
-            return res.status(404).json({
-                error: 'No account found with this email. Please sign up first.'
-            });
-        }
-
-        res.json({
-            message: `Welcome back, ${rows[0].full_name}!`,
-            user: rows[0]
-        });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-}
-
-// 4. GET /api/shows
+// 1. GET /api/shows
 export async function getShows(req, res) {
     try {
         await releaseExpiredHolds();
@@ -179,7 +95,7 @@ export async function getShows(req, res) {
     }
 }
 
-// 5. GET /api/shows/:showId
+// 2. GET /api/shows/:showId
 export async function getShowById(req, res) {
     try {
         await releaseExpiredHolds();
@@ -190,7 +106,7 @@ export async function getShowById(req, res) {
     }
 }
 
-// 6. POST /api/shows/:showId/reset (Calls Stored Procedure sp_reset_show_demo)
+// 3. POST /api/shows/:showId/reset (Calls Stored Procedure sp_reset_show_demo)
 export async function resetShowDemo(req, res) {
     try {
         const showId = Number(req.params.showId);

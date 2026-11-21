@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 import {
     SOCKET_URL,
-    enrichShow,
     fetchUsers,
     fetchShows,
     fetchShowDetails,
@@ -14,14 +13,14 @@ import {
     simulateRaceApi,
     resetShowApi
 } from './services/api';
+import { enrichShow } from './constants/theaterData';
 
 import Navbar from './components/Navbar';
-import LandingPage from './components/LandingPage';
-import SignupPage from './components/SignupPage';
-import LoginPage from './components/LoginPage';
-import TheaterSearchPage from './components/TheaterSearchPage';
-import SeatMap from './components/SeatMap';
-import ConcurrencyPanel from './components/ConcurrencyPanel';
+import LandingPage from './pages/LandingPage';
+import SignupPage from './pages/SignupPage';
+import LoginPage from './pages/LoginPage';
+import TheaterSearchPage from './pages/TheaterSearchPage';
+import BookingPage from './pages/BookingPage';
 
 export default function App() {
     // 5 Separate Pages: 'landing' -> 'signup' -> 'login' -> 'theaters' -> 'booking'
@@ -103,7 +102,7 @@ export default function App() {
         return () => socket.disconnect();
     }, [selectedShowId]);
 
-    // Step 1: Sign Up -> Redirects to Login Page!
+    // Step 1: Sign Up -> Redirects to Login Page
     async function handleSignupSubmit({ fullName, email }) {
         const res = await signupUserApi({ fullName, email });
         if (res.users) {
@@ -118,7 +117,7 @@ export default function App() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // Step 2: Log In -> Redirects to Search Theaters in Cities Page!
+    // Step 2: Log In -> Redirects to Search Theaters in Cities Page
     async function handleLoginSubmit({ email }) {
         const res = await loginUserApi({ email });
         if (res.user) {
@@ -140,7 +139,7 @@ export default function App() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // Step 3: Click on a Theater -> Opens the Seat Selection & Booking Page!
+    // Step 3: Click on a Theater -> Opens the Seat Selection & Booking Page
     function handleSelectTheaterShow(showId) {
         setSelectedShowId(Number(showId));
         setCurrentPage('booking');
@@ -269,7 +268,6 @@ export default function App() {
                 {/* PAGE 1: PUBLIC LANDING PAGE */}
                 {currentPage === 'landing' && (
                     <LandingPage
-                        shows={shows}
                         loggedInUser={loggedInUser}
                         onGoToLogin={() => {
                             setMessage('');
@@ -300,7 +298,6 @@ export default function App() {
                 {/* PAGE 3: SEPARATE LOG IN PAGE */}
                 {currentPage === 'login' && (
                     <LoginPage
-                        users={users}
                         prefilledEmail={prefilledEmail}
                         onLoginSubmit={handleLoginSubmit}
                         onGoToSignup={() => {
@@ -322,55 +319,23 @@ export default function App() {
                     />
                 )}
 
-                {/* PAGE 5: SEPARATE SEAT SELECTION & BOOKING PAGE (ONLY AFTER CLICKING A THEATER) */}
+                {/* PAGE 5: SEPARATE SEAT SELECTION & BOOKING PAGE */}
                 {currentPage === 'booking' && (
-                    <div className="space-y-6">
-                        {/* Back to Theaters Bar */}
-                        <div className="bg-slate-900 border border-slate-800 rounded-2xl px-5 py-3.5 flex flex-wrap items-center justify-between gap-4">
-                            <div>
-                                <span className="text-[11px] font-bold uppercase tracking-wider text-rose-400">
-                                    Step 2 of 2 • Auditorium Seat Selection
-                                </span>
-                                <h2 className="text-base font-extrabold text-white">
-                                    📍 {currentShowObj?.theaterName} —{' '}
-                                    <span className="text-indigo-300">
-                                        {currentShowObj?.movie_title}
-                                    </span>
-                                </h2>
-                            </div>
-                            <button
-                                onClick={() => setCurrentPage('theaters')}
-                                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700 transition cursor-pointer"
-                            >
-                                ← Back to Theaters List
-                            </button>
-                        </div>
-
-                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                            <div className="lg:col-span-7">
-                                <SeatMap
-                                    seats={seats}
-                                    selectedSeatIds={selectedSeatIds}
-                                    onToggleSeat={handleToggleSeat}
-                                    onSetSelectedSeats={setSelectedSeatIds}
-                                    onHoldSeats={handleHoldSeats}
-                                    bookings={bookings}
-                                    onConfirmBooking={handleConfirmBooking}
-                                    onCancelBooking={handleCancelBooking}
-                                    currentShow={currentShowObj}
-                                />
-                            </div>
-
-                            <div className="lg:col-span-5">
-                                <ConcurrencyPanel
-                                    seats={seats}
-                                    auditLogs={auditLogs}
-                                    onSimulateRace={handleSimulateRace}
-                                    simulationResult={simulationResult}
-                                />
-                            </div>
-                        </div>
-                    </div>
+                    <BookingPage
+                        currentShow={currentShowObj}
+                        seats={seats}
+                        selectedSeatIds={selectedSeatIds}
+                        onToggleSeat={handleToggleSeat}
+                        onSetSelectedSeats={setSelectedSeatIds}
+                        onHoldSeats={handleHoldSeats}
+                        bookings={bookings}
+                        onConfirmBooking={handleConfirmBooking}
+                        onCancelBooking={handleCancelBooking}
+                        auditLogs={auditLogs}
+                        onSimulateRace={handleSimulateRace}
+                        simulationResult={simulationResult}
+                        onBackToTheaters={() => setCurrentPage('theaters')}
+                    />
                 )}
             </main>
         </div>

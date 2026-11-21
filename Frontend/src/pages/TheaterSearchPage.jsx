@@ -1,5 +1,5 @@
 import React from 'react';
-import { enrichShow } from '../services/api';
+import { enrichShow } from '../constants/theaterData';
 
 export default function TheaterSearchPage({
     shows,
@@ -46,7 +46,6 @@ export default function TheaterSearchPage({
                 </div>
 
                 <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
-                    {/* Search Input */}
                     <div className="relative flex-1">
                         <input
                             type="text"
@@ -65,7 +64,6 @@ export default function TheaterSearchPage({
                         )}
                     </div>
 
-                    {/* City Filter Pills */}
                     <div className="flex flex-wrap items-center gap-2">
                         <span className="text-xs font-semibold text-slate-400">📍 City:</span>
                         {['ALL', 'Gurugram', 'New Delhi', 'Mumbai'].map((city) => (
@@ -120,7 +118,6 @@ export default function TheaterSearchPage({
                                 className="bg-slate-900 border border-slate-800 hover:border-rose-500/60 rounded-2xl p-6 shadow-xl transition cursor-pointer group"
                             >
                                 <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-                                    {/* Left: Theater Info & Location */}
                                     <div className="space-y-2.5 flex-1">
                                         <div className="flex flex-wrap items-center gap-2">
                                             <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
@@ -142,7 +139,6 @@ export default function TheaterSearchPage({
 
                                         <p className="text-xs text-slate-400">{sh.mallAddress}</p>
 
-                                        {/* Amenities */}
                                         <div className="flex flex-wrap items-center gap-2 pt-1">
                                             {sh.amenities?.map((am) => (
                                                 <span
@@ -155,7 +151,6 @@ export default function TheaterSearchPage({
                                         </div>
                                     </div>
 
-                                    {/* Right: Movie Playing & Showtime Button to Open Seat Map */}
                                     <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 w-full lg:w-auto min-w-[300px] flex flex-col justify-between gap-3">
                                         <div>
                                             <span className="text-[10px] uppercase tracking-wider text-slate-400 block">
