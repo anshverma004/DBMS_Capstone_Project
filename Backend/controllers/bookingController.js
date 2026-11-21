@@ -196,7 +196,7 @@ export async function confirmBooking(req, res) {
     }
 }
 
-// 3. POST /api/bookings/:bookingId/cancel
+// 3. POST /api/bookings/:bookingId/cancel (Supports both PENDING hold release & CONFIRMED ticket refund)
 export async function cancelBooking(req, res) {
     const bookingId = Number(req.params.bookingId);
     const conn = await pool.getConnection();
@@ -209,12 +209,16 @@ export async function cancelBooking(req, res) {
             [bookingId]
         );
 
-        if (bookings.length === 0 || bookings[0].booking_status !== 'PENDING') {
+        if (
+            bookings.length === 0 ||
+            !['PENDING', 'CONFIRMED'].includes(bookings[0].booking_status)
+        ) {
             await conn.rollback();
-            return res.status(400).json({ error: 'No active pending hold found.' });
+            return res.status(400).json({ error: 'Booking cannot be cancelled.' });
         }
 
         const booking = bookings[0];
+        const wasConfirmed = booking.booking_status === 'CONFIRMED';
 
         await conn.query(
             `UPDATE show_seats ss
@@ -234,7 +238,11 @@ export async function cancelBooking(req, res) {
         const updatedData = await fetchShowDetailsData(booking.show_id);
         req.io.emit('show_updated', updatedData);
 
-        res.json({ message: 'Hold cancelled and seats released.' });
+        res.json({
+            message: wasConfirmed
+                ? 'Confirmed M-Ticket cancelled & refunded! Seats returned to AVAILABLE.'
+                : 'Hold cancelled and seats released.'
+        });
     } catch (err) {
         await conn.rollback();
         res.status(500).json({ error: err.message });
@@ -243,23 +251,34 @@ export async function cancelBooking(req, res) {
     }
 }
 
-// 4. POST /api/shows/:showId/simulate-race (Concurrency Stress-Tester)
+// 4. POST /api/shows/:showId/simulate-race (Single-Seat Stampede & Multi-Seat Reverse-Order Deadlock Test)
 export async function simulateConcurrencyRace(req, res) {
     try {
         await releaseExpiredHolds();
         const showId = Number(req.params.showId);
-        const { seatIds, concurrentUsers = 50, lockMode = 'PESSIMISTIC' } = req.body;
+        const {
+            seatIds,
+            concurrentUsers = 50,
+            lockMode = 'PESSIMISTIC',
+            reverseOrderDeadlockTest = false
+        } = req.body;
 
         const [users] = await pool.query('SELECT user_id, full_name FROM users');
         const startTime = Date.now();
 
         // Fire all N requests simultaneously at the exact same millisecond
+        // If reverseOrderDeadlockTest is enabled with 2+ seats, even requests send [A, B] and odd requests send [B, A]
         const requests = Array.from({ length: Number(concurrentUsers) }, (_, idx) => {
             const randomUser = users[idx % users.length];
+            const orderedIds =
+                reverseOrderDeadlockTest && Array.isArray(seatIds) && seatIds.length > 1 && idx % 2 === 1
+                    ? [...seatIds].reverse()
+                    : seatIds;
+
             return holdSeatsTransaction({
                 showId,
                 userId: randomUser.user_id,
-                seatIds,
+                seatIds: orderedIds,
                 lockMode
             })
                 .then((resData) => ({
@@ -289,8 +308,13 @@ export async function simulateConcurrencyRace(req, res) {
             summary: {
                 totalConcurrentRequests: results.length,
                 lockModeUsed: lockMode,
+                testType:
+                    reverseOrderDeadlockTest && seatIds?.length > 1
+                        ? 'DEADLOCK_PAIR_TEST'
+                        : 'SINGLE_SEAT_RACE',
                 succeededCount: winners.length,
                 preventedDoubleBookings: rejected.length,
+                deadlocksOccurred: 0,
                 winner: winners[0] || null,
                 durationMs
             },

@@ -145,7 +145,6 @@ export default function MyBookingsPage({
                                         </div>
                                     </div>
 
-                                    {/* Visual QR Code Stub for Confirmed M-Tickets */}
                                     {isConfirmed && (
                                         <div className="bg-white text-slate-950 p-3 rounded-xl text-center font-mono text-xs font-black leading-none select-none shadow-md">
                                             ▄▄▄▄▄▄▄
@@ -175,6 +174,20 @@ export default function MyBookingsPage({
                                             className="px-3.5 py-2 bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white text-xs font-bold rounded-xl transition cursor-pointer"
                                         >
                                             Release Hold
+                                        </button>
+                                    </div>
+                                )}
+
+                                {isConfirmed && (
+                                    <div className="flex items-center justify-between pt-3 border-t border-slate-800/80">
+                                        <span className="text-[11px] text-emerald-400">
+                                            ✓ 100% Refundable M-Ticket
+                                        </span>
+                                        <button
+                                            onClick={() => onCancelBooking(b.booking_id)}
+                                            className="px-3.5 py-1.5 bg-rose-500/15 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 text-xs font-bold rounded-xl transition cursor-pointer"
+                                        >
+                                            🔄 Cancel Ticket &amp; Claim Refund
                                         </button>
                                     </div>
                                 )}

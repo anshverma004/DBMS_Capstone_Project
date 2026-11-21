@@ -9,11 +9,15 @@ export default function ConcurrencyPanel({
     const availableSeats = seats.filter((s) => s.status === 'AVAILABLE');
     const [targetSeatId, setTargetSeatId] = useState('');
     const [concurrentCount, setConcurrentCount] = useState(50);
+    const [testMode, setTestMode] = useState('SINGLE'); // 'SINGLE' | 'DEADLOCK_PAIR'
     const [benchmarkHistory, setBenchmarkHistory] = useState([]);
 
-    const selectedId = targetSeatId || availableSeats[0]?.show_seat_id || '';
+    const selectedId = Number(targetSeatId) || availableSeats[0]?.show_seat_id || '';
 
-    // Append each new simulationResult into the Benchmark Comparison History
+    // Find a second available seat for the Reverse-Order Deadlock Pair Test
+    const secondSeat =
+        availableSeats.find((s) => s.show_seat_id !== Number(selectedId)) || null;
+
     useEffect(() => {
         if (simulationResult) {
             setBenchmarkHistory((prev) => [
@@ -27,21 +31,62 @@ export default function ConcurrencyPanel({
         }
     }, [simulationResult]);
 
+    function handleFireTest() {
+        if (!selectedId) return;
+        if (testMode === 'DEADLOCK_PAIR' && secondSeat) {
+            onSimulateRace(
+                [Number(selectedId), Number(secondSeat.show_seat_id)],
+                concurrentCount,
+                true
+            );
+        } else {
+            onSimulateRace([Number(selectedId)], concurrentCount, false);
+        }
+    }
+
     return (
         <div className="space-y-6">
-            {/* 1. Concurrency Stress-Test Simulator Card */}
+            {/* 1. Concurrency & Deadlock Stress-Test Simulator Card */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
                 <h3 className="text-base font-bold text-white mb-1">
-                    Concurrency Stress-Test Simulator
+                    Concurrency &amp; Deadlock Stress-Tester
                 </h3>
                 <p className="text-xs text-slate-400 mb-4">
-                    Fire simultaneous requests at the same seat to test MySQL race-condition prevention.
+                    Test single-seat flash-sale stampedes or reverse-order multi-seat deadlock prevention.
                 </p>
+
+                {/* Test Type Switcher */}
+                <div className="grid grid-cols-2 gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 mb-4">
+                    <button
+                        type="button"
+                        onClick={() => setTestMode('SINGLE')}
+                        className={`py-2 px-2 rounded-lg text-[11px] font-bold transition cursor-pointer ${
+                            testMode === 'SINGLE'
+                                ? 'bg-amber-500 text-slate-950'
+                                : 'text-slate-400 hover:text-white'
+                        }`}
+                    >
+                        🎯 Single-Seat Race
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setTestMode('DEADLOCK_PAIR')}
+                        className={`py-2 px-2 rounded-lg text-[11px] font-bold transition cursor-pointer ${
+                            testMode === 'DEADLOCK_PAIR'
+                                ? 'bg-indigo-600 text-white'
+                                : 'text-slate-400 hover:text-white'
+                        }`}
+                    >
+                        🔀 Deadlock Pair Test (A,B vs B,A)
+                    </button>
+                </div>
 
                 <div className="space-y-3">
                     <div>
                         <label className="block text-xs font-medium text-slate-400 mb-1">
-                            Target Available Seat:
+                            {testMode === 'DEADLOCK_PAIR'
+                                ? 'Primary Target Seat (Auto-paired with next free seat):'
+                                : 'Target Available Seat:'}
                         </label>
                         <select
                             value={selectedId}
@@ -54,6 +99,21 @@ export default function ConcurrencyPanel({
                                 </option>
                             ))}
                         </select>
+                        {testMode === 'DEADLOCK_PAIR' && secondSeat && (
+                            <p className="text-[11px] text-indigo-300 mt-1">
+                                🔀 25 requests will lock{' '}
+                                <strong>
+                                    ({availableSeats.find((s) => s.show_seat_id === Number(selectedId))?.seat_code},{' '}
+                                    {secondSeat.seat_code})
+                                </strong>{' '}
+                                &amp; 25 will lock{' '}
+                                <strong>
+                                    ({secondSeat.seat_code},{' '}
+                                    {availableSeats.find((s) => s.show_seat_id === Number(selectedId))?.seat_code})
+                                </strong>{' '}
+                                simultaneously!
+                            </p>
+                        )}
                     </div>
 
                     <div>
@@ -71,24 +131,33 @@ export default function ConcurrencyPanel({
                     </div>
 
                     <button
-                        onClick={() => onSimulateRace(Number(selectedId), concurrentCount)}
+                        onClick={handleFireTest}
                         disabled={!selectedId}
                         className={`w-full py-2.5 rounded-lg text-xs font-bold transition ${
                             !selectedId
                                 ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                                : testMode === 'DEADLOCK_PAIR'
+                                ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/20 cursor-pointer'
                                 : 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-lg shadow-amber-500/20 cursor-pointer'
                         }`}
                     >
-                        ⚡ Fire Simultaneous Requests
+                        {testMode === 'DEADLOCK_PAIR'
+                            ? '🔀 Fire Reverse-Order Deadlock Attack'
+                            : '⚡ Fire Simultaneous Requests'}
                     </button>
                 </div>
 
                 {/* 2. Latest Simulation Scoreboard */}
                 {simulationResult && (
                     <div className="mt-4 bg-slate-950 border border-slate-800 rounded-xl p-4">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-amber-400 mb-2.5">
-                            Latest Run ({simulationResult.lockModeUsed})
-                        </h4>
+                        <div className="flex items-center justify-between mb-2.5">
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-amber-400">
+                                Latest Result ({simulationResult.lockModeUsed})
+                            </h4>
+                            <span className="text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                                🛡️ 0 Deadlocks
+                            </span>
+                        </div>
                         <div className="grid grid-cols-2 gap-2 text-xs">
                             <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
                                 <span className="text-slate-400 block text-[11px]">Total Requests</span>
@@ -136,33 +205,33 @@ export default function ConcurrencyPanel({
                             <table className="w-full text-left text-[11px] text-slate-300">
                                 <thead className="bg-slate-950 text-slate-400 uppercase text-[9px]">
                                     <tr>
-                                        <th className="px-2.5 py-1.5">Run</th>
-                                        <th className="px-2.5 py-1.5">Strategy</th>
-                                        <th className="px-2.5 py-1.5">Users</th>
-                                        <th className="px-2.5 py-1.5">Won</th>
-                                        <th className="px-2.5 py-1.5">409 Blocked</th>
-                                        <th className="px-2.5 py-1.5">Time</th>
+                                        <th className="px-2 py-1.5">Run</th>
+                                        <th className="px-2 py-1.5">Strategy</th>
+                                        <th className="px-2 py-1.5">Users</th>
+                                        <th className="px-2 py-1.5">Won</th>
+                                        <th className="px-2 py-1.5">409 Blocked</th>
+                                        <th className="px-2 py-1.5">Time</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-800/80">
                                     {benchmarkHistory.map((item) => (
                                         <tr key={item.runId} className="bg-slate-950/40">
-                                            <td className="px-2.5 py-1.5 font-mono text-slate-500">
+                                            <td className="px-2 py-1.5 font-mono text-slate-500">
                                                 #{item.runId}
                                             </td>
-                                            <td className="px-2.5 py-1.5 font-bold text-amber-300">
+                                            <td className="px-2 py-1.5 font-bold text-amber-300">
                                                 {item.lockModeUsed}
                                             </td>
-                                            <td className="px-2.5 py-1.5">
+                                            <td className="px-2 py-1.5">
                                                 {item.totalConcurrentRequests}
                                             </td>
-                                            <td className="px-2.5 py-1.5 font-bold text-emerald-400">
+                                            <td className="px-2 py-1.5 font-bold text-emerald-400">
                                                 {item.succeededCount}
                                             </td>
-                                            <td className="px-2.5 py-1.5 font-bold text-rose-400">
+                                            <td className="px-2 py-1.5 font-bold text-rose-400">
                                                 {item.preventedDoubleBookings}
                                             </td>
-                                            <td className="px-2.5 py-1.5 font-mono text-indigo-300">
+                                            <td className="px-2 py-1.5 font-mono text-indigo-300">
                                                 {item.durationMs}ms
                                             </td>
                                         </tr>

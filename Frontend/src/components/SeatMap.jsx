@@ -19,13 +19,12 @@ export default function SeatMap({
     currentShow
 }) {
     const [tickOffset, setTickOffset] = useState(0);
+    const [tierFilter, setTierFilter] = useState('ALL'); // 'ALL' | 'CLASSIC' | 'PRIME' | 'RECLINER' | 'BEST_VIEW'
 
-    // Reset tick offset whenever fresh seats/bookings arrive from backend or socket
     useEffect(() => {
         setTickOffset(0);
     }, [seats, bookings]);
 
-    // 1-second live countdown ticker
     useEffect(() => {
         const timer = setInterval(() => {
             setTickOffset((prev) => prev + 1);
@@ -36,7 +35,6 @@ export default function SeatMap({
     const pendingBookings = bookings.filter((b) => b.booking_status === 'PENDING');
     const confirmedBookings = bookings.filter((b) => b.booking_status === 'CONFIRMED');
 
-    // Live KPI counts
     const availableCount = seats.filter((s) => s.status === 'AVAILABLE').length;
     const heldCount = seats.filter((s) => s.status === 'HELD').length;
     const bookedCount = seats.filter((s) => s.status === 'BOOKED').length;
@@ -44,7 +42,6 @@ export default function SeatMap({
         .filter((s) => s.status === 'BOOKED')
         .reduce((sum, s) => sum + Number(s.price), 0);
 
-    // Selected seats details & transparent price breakdown
     const selectedSeatObjects = seats.filter((s) =>
         selectedSeatIds.includes(s.show_seat_id)
     );
@@ -53,7 +50,15 @@ export default function SeatMap({
         0
     );
 
-    // Smart Best-Available Contiguous Seats Auto-Finder
+    // Check if a seat is in the IMAX Acoustic & Visual Sweet Spot (Rows C-D, Seats 4-7)
+    function isBestViewSeat(seat) {
+        return (
+            ['C', 'D'].includes(seat.row_label) &&
+            seat.seat_number >= 4 &&
+            seat.seat_number <= 7
+        );
+    }
+
     function handleAutoPickBestSeats(count) {
         if (!onSetSelectedSeats) return;
 
@@ -87,7 +92,6 @@ export default function SeatMap({
         }
     }
 
-    // Group seats by tier and row for realistic cinema hall rendering
     const tiers = [
         {
             key: 'CLASSIC',
@@ -135,8 +139,7 @@ export default function SeatMap({
 
             {/* 2. MAIN THEATER AUDITORIUM CARD */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
-                {/* Auditorium Header & Smart Auto-Picker */}
-                <div className="flex flex-wrap items-center justify-between gap-4 pb-4 mb-5 border-b border-slate-800">
+                <div className="flex flex-wrap items-center justify-between gap-4 pb-4 mb-4 border-b border-slate-800">
                     <div>
                         <h3 className="text-base font-bold text-white flex items-center gap-2">
                             🎬 {currentShow?.movie_title || 'Theater Auditorium'}
@@ -149,7 +152,6 @@ export default function SeatMap({
                         </p>
                     </div>
 
-                    {/* Smart Contiguous Seat Auto-Picker */}
                     <div className="flex flex-wrap items-center gap-2">
                         <span className="text-[11px] text-slate-400 font-medium">
                             ✨ Auto-Pick Best Seats:
@@ -174,6 +176,35 @@ export default function SeatMap({
                             </button>
                         )}
                     </div>
+                </div>
+
+                {/* Tier & Sweet-Spot View Filter Pills */}
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-5">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                        {[
+                            { id: 'ALL', label: 'All Tiers' },
+                            { id: 'CLASSIC', label: 'Classic' },
+                            { id: 'PRIME', label: 'Prime' },
+                            { id: 'RECLINER', label: 'VIP Recliner' },
+                            { id: 'BEST_VIEW', label: '⭐ Best IMAX Center View' }
+                        ].map((f) => (
+                            <button
+                                key={f.id}
+                                type="button"
+                                onClick={() => setTierFilter(f.id)}
+                                className={`px-3 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer ${
+                                    tierFilter === f.id
+                                        ? 'bg-rose-600 text-white'
+                                        : 'bg-slate-950 text-slate-400 border border-slate-800 hover:text-white'
+                                }`}
+                            >
+                                {f.label}
+                            </button>
+                        ))}
+                    </div>
+                    <span className="text-[11px] text-amber-300">
+                        ⭐ = Acoustic &amp; Visual Center Sweet-Spot
+                    </span>
                 </div>
 
                 {/* Curved Cinema Screen Banner */}
@@ -207,6 +238,14 @@ export default function SeatMap({
                 {/* TIERED AUDITORIUM ROWS WITH CENTER AISLE WALKWAY */}
                 <div className="space-y-5 mb-6">
                     {tiers.map((tierGroup) => {
+                        if (
+                            tierFilter !== 'ALL' &&
+                            tierFilter !== 'BEST_VIEW' &&
+                            tierFilter !== tierGroup.key
+                        ) {
+                            return null;
+                        }
+
                         const tierSeats = seats.filter((s) =>
                             tierGroup.rows.includes(s.row_label)
                         );
@@ -416,9 +455,12 @@ export default function SeatMap({
                                             Paid: <strong className="text-emerald-400">₹{b.total_amount}</strong>
                                         </div>
                                     </div>
-                                    <span className="text-[10px] font-mono bg-emerald-500/20 text-emerald-300 px-2 py-1 rounded">
-                                        {b.lock_mode}
-                                    </span>
+                                    <button
+                                        onClick={() => onCancelBooking(b.booking_id)}
+                                        className="text-[10px] font-bold bg-rose-500/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 px-2.5 py-1 rounded-lg transition cursor-pointer"
+                                    >
+                                        Refund
+                                    </button>
                                 </div>
                             ))}
                         </div>
@@ -428,10 +470,11 @@ export default function SeatMap({
         </div>
     );
 
-    // Helper to render each individual seat button
     function renderSeatButton(seat) {
         const isSelected = selectedSeatIds.includes(seat.show_seat_id);
         const liveSeatSec = Math.max(0, Number(seat.seconds_left || 0) - tickOffset);
+        const bestView = isBestViewSeat(seat);
+        const dimmedByBestViewFilter = tierFilter === 'BEST_VIEW' && !bestView;
 
         let seatStyle =
             'bg-emerald-950/60 border-emerald-500/60 text-emerald-300 hover:bg-emerald-900/70 cursor-pointer';
@@ -459,9 +502,12 @@ export default function SeatMap({
                 onClick={() => onToggleSeat(seat.show_seat_id)}
                 disabled={seat.status !== 'AVAILABLE'}
                 title={tooltipText}
-                className={`p-1.5 rounded-lg border text-center transition flex flex-col items-center justify-center ${seatStyle}`}
+                className={`p-1.5 rounded-lg border text-center transition flex flex-col items-center justify-center ${seatStyle} ${
+                    dimmedByBestViewFilter ? 'opacity-25' : ''
+                }`}
             >
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-0.5">
+                    {bestView && <span className="text-[8px]">⭐</span>}
                     <span className="text-xs font-bold">{seat.seat_code}</span>
                     <span className="text-[8px] font-mono opacity-70">v{seat.version}</span>
                 </div>

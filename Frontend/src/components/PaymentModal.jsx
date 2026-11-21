@@ -1,5 +1,10 @@
 import React, { useState } from 'react';
 
+const SNACK_COMBOS = [
+    { id: 'popcorn', name: '🍿 Caramel Popcorn + 2 Cokes', price: 140 },
+    { id: 'nachos', name: '🧀 Loaded Nachos & Pepsi', price: 110 }
+];
+
 export default function PaymentModal({
     booking,
     currentShow,
@@ -9,9 +14,26 @@ export default function PaymentModal({
     const [method, setMethod] = useState('INSTANT'); // 'INSTANT' | 'UPI' | 'CARD'
     const [upiId, setUpiId] = useState('user@okicici');
     const [cardNum, setCardNum] = useState('4532 •••• •••• 8891');
+    const [selectedSnacks, setSelectedSnacks] = useState([]);
+    const [promoApplied, setPromoApplied] = useState(false);
     const [processing, setProcessing] = useState(false);
 
     if (!booking) return null;
+
+    function toggleSnack(snackId) {
+        setSelectedSnacks((prev) =>
+            prev.includes(snackId)
+                ? prev.filter((id) => id !== snackId)
+                : [...prev, snackId]
+        );
+    }
+
+    const ticketBase = Number(booking.total_amount) || 0;
+    const snacksTotal = SNACK_COMBOS.filter((s) =>
+        selectedSnacks.includes(s.id)
+    ).reduce((sum, s) => sum + s.price, 0);
+    const discount = promoApplied ? Math.min(50, ticketBase) : 0;
+    const finalPayable = Math.max(0, ticketBase + snacksTotal - discount);
 
     async function handlePay(e) {
         e.preventDefault();
@@ -46,27 +68,79 @@ export default function PaymentModal({
                     </button>
                 </div>
 
-                <form onSubmit={handlePay} className="p-6 space-y-5">
+                <form onSubmit={handlePay} className="p-6 space-y-4">
+                    {/* Optional Cinema F&B Combos */}
+                    <div className="space-y-2">
+                        <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                            🍿 Add Cinema Snacks (Optional)
+                        </label>
+                        <div className="grid grid-cols-1 gap-2">
+                            {SNACK_COMBOS.map((snack) => {
+                                const active = selectedSnacks.includes(snack.id);
+                                return (
+                                    <button
+                                        key={snack.id}
+                                        type="button"
+                                        onClick={() => toggleSnack(snack.id)}
+                                        className={`flex items-center justify-between px-3 py-2 rounded-xl border text-xs transition cursor-pointer ${
+                                            active
+                                                ? 'bg-amber-500/15 border-amber-500 text-amber-300 font-bold'
+                                                : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700'
+                                        }`}
+                                    >
+                                        <span>{snack.name}</span>
+                                        <span>+₹{snack.price}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Promo Coupon Button */}
+                    <div className="flex items-center justify-between bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs">
+                        <div>
+                            <span className="font-bold text-rose-400">🏷️ FLASH50</span>
+                            <span className="text-slate-400 ml-1.5">
+                                Instant ₹50 Flash-Sale Coupon
+                            </span>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setPromoApplied((p) => !p)}
+                            className={`px-2.5 py-1 rounded-lg font-bold text-[11px] cursor-pointer ${
+                                promoApplied
+                                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                                    : 'bg-rose-600 text-white'
+                            }`}
+                        >
+                            {promoApplied ? '✓ Applied (-₹50)' : 'Apply'}
+                        </button>
+                    </div>
+
                     {/* Ticket Summary Box */}
-                    <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2 text-xs">
+                    <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-1.5 text-xs">
                         <div className="flex items-center justify-between">
-                            <span className="text-slate-400">Movie:</span>
+                            <span className="text-slate-400">Movie &amp; Seats:</span>
                             <span className="font-bold text-white">
-                                {currentShow?.movie_title}
+                                {currentShow?.movie_title} ({booking.seats_list})
                             </span>
                         </div>
                         <div className="flex items-center justify-between">
-                            <span className="text-slate-400">Theater:</span>
-                            <span className="font-semibold text-slate-200 truncate max-w-[230px]">
-                                {currentShow?.theaterName}
-                            </span>
+                            <span className="text-slate-400">Tickets Subtotal:</span>
+                            <span className="font-semibold text-slate-200">₹{ticketBase}</span>
                         </div>
-                        <div className="flex items-center justify-between">
-                            <span className="text-slate-400">Locked Seats:</span>
-                            <span className="font-extrabold text-rose-400">
-                                {booking.seats_list}
-                            </span>
-                        </div>
+                        {snacksTotal > 0 && (
+                            <div className="flex items-center justify-between text-amber-300">
+                                <span>F&amp;B Snacks Combo:</span>
+                                <span>+₹{snacksTotal}</span>
+                            </div>
+                        )}
+                        {discount > 0 && (
+                            <div className="flex items-center justify-between text-emerald-400">
+                                <span>Coupon (FLASH50):</span>
+                                <span>-₹{discount}</span>
+                            </div>
+                        )}
                         <div className="flex items-center justify-between">
                             <span className="text-slate-400">Convenience Fee:</span>
                             <span className="font-bold text-emerald-400">₹0 (FREE)</span>
@@ -74,16 +148,13 @@ export default function PaymentModal({
                         <div className="flex items-center justify-between pt-2 border-t border-slate-800 text-sm">
                             <span className="font-bold text-white">Total Payable:</span>
                             <span className="font-extrabold text-emerald-400 text-base">
-                                ₹{booking.total_amount}
+                                ₹{finalPayable}
                             </span>
                         </div>
                     </div>
 
                     {/* Payment Method Tabs */}
-                    <div className="space-y-3">
-                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
-                            Select Payment Method
-                        </label>
+                    <div className="space-y-2.5">
                         <div className="grid grid-cols-3 gap-2">
                             {[
                                 { id: 'INSTANT', label: '⚡ 1-Click Pay' },
@@ -106,33 +177,25 @@ export default function PaymentModal({
                         </div>
 
                         {method === 'UPI' && (
-                            <div>
-                                <label className="block text-[11px] text-slate-400 mb-1">
-                                    Enter UPI ID (GPay / PhonePe / Paytm)
-                                </label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={upiId}
-                                    onChange={(e) => setUpiId(e.target.value)}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                                />
-                            </div>
+                            <input
+                                type="text"
+                                required
+                                value={upiId}
+                                onChange={(e) => setUpiId(e.target.value)}
+                                placeholder="Enter UPI ID"
+                                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                            />
                         )}
 
                         {method === 'CARD' && (
-                            <div>
-                                <label className="block text-[11px] text-slate-400 mb-1">
-                                    Debit / Credit Card Number
-                                </label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={cardNum}
-                                    onChange={(e) => setCardNum(e.target.value)}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                                />
-                            </div>
+                            <input
+                                type="text"
+                                required
+                                value={cardNum}
+                                onChange={(e) => setCardNum(e.target.value)}
+                                placeholder="Card Number"
+                                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                            />
                         )}
                     </div>
 
@@ -143,7 +206,7 @@ export default function PaymentModal({
                     >
                         {processing
                             ? 'Committing MySQL Transaction...'
-                            : `✅ Pay ₹${booking.total_amount} & Confirm M-Ticket`}
+                            : `✅ Pay ₹${finalPayable} & Confirm M-Ticket`}
                     </button>
                 </form>
             </div>

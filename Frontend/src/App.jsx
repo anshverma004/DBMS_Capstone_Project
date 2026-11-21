@@ -23,9 +23,10 @@ import LoginPage from './pages/LoginPage';
 import TheaterSearchPage from './pages/TheaterSearchPage';
 import BookingPage from './pages/BookingPage';
 import MyBookingsPage from './pages/MyBookingsPage';
+import DbmsAnalyticsPage from './pages/DbmsAnalyticsPage';
 
 export default function App() {
-    // 6 Separate Pages: 'landing' -> 'signup' -> 'login' -> 'theaters' -> 'booking' -> 'mybookings'
+    // Pages: 'landing' -> 'signup' -> 'login' -> 'theaters' -> 'booking' -> 'mybookings' -> 'analytics'
     const [currentPage, setCurrentPage] = useState('landing');
     const [loggedInUser, setLoggedInUser] = useState(null);
     const [prefilledEmail, setPrefilledEmail] = useState('');
@@ -195,7 +196,7 @@ export default function App() {
         }
     }
 
-    // Cancel active hold
+    // Cancel active hold or refund confirmed ticket
     async function handleCancelBooking(bookingId) {
         try {
             const res = await cancelBookingApi(bookingId);
@@ -206,17 +207,21 @@ export default function App() {
         }
     }
 
-    // Simulate 50 concurrent users attacking the same seat
-    async function handleSimulateRace(targetSeatId, concurrentUsers) {
+    // Simulate 50 concurrent users (Single-Seat Stampede or Reverse-Order Deadlock Pair Test)
+    async function handleSimulateRace(targetSeatIds, concurrentUsers, reverseOrderDeadlockTest = false) {
         try {
+            const seatIdsArray = Array.isArray(targetSeatIds) ? targetSeatIds : [targetSeatIds];
             const res = await simulateRaceApi(selectedShowId, {
-                seatIds: [targetSeatId],
+                seatIds: seatIdsArray,
                 concurrentUsers,
-                lockMode
+                lockMode,
+                reverseOrderDeadlockTest
             });
             setSimulationResult(res.summary);
             setMessage(
-                `Simulated ${res.summary.totalConcurrentRequests} requests: 1 Winner, ${res.summary.preventedDoubleBookings} Rejected!`
+                reverseOrderDeadlockTest
+                    ? `Deadlock Attack Completed: 0 Deadlocks, ${res.summary.succeededCount} Group Winner, ${res.summary.preventedDoubleBookings} Rolled Back!`
+                    : `Simulated ${res.summary.totalConcurrentRequests} requests: 1 Winner, ${res.summary.preventedDoubleBookings} Rejected!`
             );
             await loadShowData(selectedShowId);
         } catch (err) {
@@ -367,6 +372,19 @@ export default function App() {
                         onOpenPaymentModal={(b) => setPaymentModalBooking(b)}
                         onCancelBooking={handleCancelBooking}
                         onBackToTheaters={() => setCurrentPage('theaters')}
+                    />
+                )}
+
+                {/* PAGE 7: DEDICATED DBMS LIVE ANALYTICS & SQL INSPECTOR PAGE */}
+                {currentPage === 'analytics' && (
+                    <DbmsAnalyticsPage
+                        shows={shows}
+                        seats={seats}
+                        bookings={bookings}
+                        auditLogs={auditLogs}
+                        users={users}
+                        currentShow={currentShowObj}
+                        onBackToBooking={() => setCurrentPage('booking')}
                     />
                 )}
             </main>

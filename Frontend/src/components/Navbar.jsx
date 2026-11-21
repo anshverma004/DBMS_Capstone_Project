@@ -32,7 +32,7 @@ export default function Navbar({
                 </div>
 
                 {/* Navigation Links & Auth Controls */}
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2.5">
                     <button
                         onClick={() => setCurrentPage('landing')}
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
@@ -71,6 +71,17 @@ export default function Navbar({
                                         {myBookingsCount}
                                     </span>
                                 )}
+                            </button>
+
+                            <button
+                                onClick={() => setCurrentPage('analytics')}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                                    currentPage === 'analytics'
+                                        ? 'bg-emerald-600 text-white'
+                                        : 'text-emerald-300 hover:text-white bg-emerald-950/50 border border-emerald-500/30'
+                                }`}
+                            >
+                                📊 DBMS Analytics
                             </button>
                         </>
                     )}
