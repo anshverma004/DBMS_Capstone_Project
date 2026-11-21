@@ -181,8 +181,6 @@ export async function deleteCustomShow(req, res) {
             });
         }
 
-        // Remove any bookings for this custom show first, then delete the show
-        // Deleting from shows automatically cascades to show_seats and seat_audit_logs via ON DELETE CASCADE!
         await pool.query(
             `DELETE bs FROM booking_seats bs
              INNER JOIN bookings b ON bs.booking_id = b.booking_id
@@ -203,9 +201,23 @@ export async function deleteCustomShow(req, res) {
 // 5. GET /api/analytics/query/:queryKey (Runs preset read-only academic SQL queries for DBMS Viva)
 export async function runPresetAnalyticsQuery(req, res) {
     const { queryKey } = req.params;
+    const startTime = Date.now();
     try {
         let sql = '';
-        if (queryKey === 'tier_aggregation') {
+        const allowedTables = {
+            table_users: 'SELECT user_id, full_name, email, created_at FROM users ORDER BY user_id DESC LIMIT 15',
+            table_movies: 'SELECT * FROM movies ORDER BY movie_id ASC LIMIT 15',
+            table_screens: 'SELECT * FROM screens ORDER BY screen_id ASC LIMIT 15',
+            table_shows: 'SELECT show_id, movie_id, screen_id, is_flash_sale, available_seats, status FROM shows ORDER BY show_id ASC LIMIT 15',
+            table_show_seats: 'SELECT show_seat_id, show_id, seat_code, tier, price, status, held_by_user_id, version FROM show_seats ORDER BY version DESC, show_seat_id ASC LIMIT 15',
+            table_bookings: 'SELECT booking_id, user_id, show_id, total_amount, booking_status, lock_mode, created_at FROM bookings ORDER BY booking_id DESC LIMIT 15',
+            table_booking_seats: 'SELECT * FROM booking_seats ORDER BY booking_seat_id DESC LIMIT 15',
+            table_seat_audit_logs: 'SELECT log_id, show_id, seat_code, old_status, new_status, old_version, new_version, changed_at FROM seat_audit_logs ORDER BY log_id DESC LIMIT 15'
+        };
+
+        if (allowedTables[queryKey]) {
+            sql = allowedTables[queryKey];
+        } else if (queryKey === 'tier_aggregation') {
             sql = `SELECT tier, status, COUNT(*) AS seat_count, SUM(price) AS total_value
                    FROM show_seats
                    GROUP BY tier, status
@@ -228,18 +240,63 @@ export async function runPresetAnalyticsQuery(req, res) {
             sql = `EXPLAIN SELECT show_seat_id, seat_code, status
                    FROM show_seats
                    WHERE show_id = 1 AND status = 'AVAILABLE'`;
+        } else if (queryKey === 'engine_telemetry') {
+            sql = `SELECT VERSION() AS mysql_version,
+                          @@transaction_isolation AS isolation_level,
+                          @@innodb_lock_wait_timeout AS lock_timeout_sec,
+                          @@autocommit AS autocommit_mode`;
         } else {
             return res.status(400).json({ error: 'Unknown preset query key.' });
         }
 
         const [rows] = await pool.query(sql);
-        res.json({ queryKey, sql, rows });
+        const durationMs = Date.now() - startTime;
+        res.json({ queryKey, sql, rows, durationMs });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 }
 
-// 6. POST /api/shows/:showId/reset (Calls Stored Procedure sp_reset_show_demo)
+// 6. POST /api/analytics/sql (Safe Read-Only Custom SQL Console for DBMS Viva)
+export async function runCustomReadOnlySql(req, res) {
+    const rawSql = String(req.body?.sql || '').trim();
+    if (!rawSql) {
+        return res.status(400).json({ error: 'Please enter a SQL query.' });
+    }
+
+    // Remove trailing semicolon and block multi-statement or write queries
+    const cleanSql = rawSql.replace(/;+\s*$/, '');
+    if (cleanSql.includes(';')) {
+        return res.status(400).json({
+            error: 'Only single read-only SQL statements are allowed in the live console.'
+        });
+    }
+
+    const firstWord = cleanSql.split(/\s+/)[0]?.toUpperCase();
+    const allowedCommands = ['SELECT', 'EXPLAIN', 'SHOW', 'DESCRIBE', 'DESC'];
+    const forbiddenKeywords = /\b(INSERT|UPDATE|DELETE|DROP|ALTER|TRUNCATE|CREATE|REPLACE|GRANT|REVOKE|CALL|SET)\b/i;
+
+    if (!allowedCommands.includes(firstWord) || forbiddenKeywords.test(cleanSql)) {
+        return res.status(403).json({
+            error: 'Read-Only Console: Only SELECT, EXPLAIN, SHOW, and DESCRIBE queries are permitted.'
+        });
+    }
+
+    const startTime = Date.now();
+    try {
+        const [rows] = await pool.query(cleanSql);
+        const durationMs = Date.now() - startTime;
+        res.json({
+            sql: cleanSql,
+            rows: Array.isArray(rows) ? rows.slice(0, 50) : [rows],
+            durationMs
+        });
+    } catch (err) {
+        res.status(400).json({ error: `MySQL Error: ${err.message}` });
+    }
+}
+
+// 7. POST /api/shows/:showId/reset (Calls Stored Procedure sp_reset_show_demo)
 export async function resetShowDemo(req, res) {
     try {
         const showId = Number(req.params.showId);
@@ -254,7 +311,7 @@ export async function resetShowDemo(req, res) {
     }
 }
 
-// 7. POST /api/shows/:showId/force-expire (Fast-forwards 5-min TTL timer for instant viva demo)
+// 8. POST /api/shows/:showId/force-expire (Fast-forwards 5-min TTL timer for instant viva demo)
 export async function forceExpireHolds(req, res) {
     try {
         const showId = Number(req.params.showId);
@@ -287,7 +344,7 @@ export async function forceExpireHolds(req, res) {
     }
 }
 
-// 8. POST /api/shows/:showId/toggle-flash-sale (Toggles Flash-Sale pricing in MySQL)
+// 9. POST /api/shows/:showId/toggle-flash-sale (Toggles Flash-Sale pricing in MySQL)
 export async function toggleFlashSale(req, res) {
     try {
         const showId = Number(req.params.showId);
@@ -330,7 +387,7 @@ export async function toggleFlashSale(req, res) {
     }
 }
 
-// 9. POST /api/shows/:showId/crowd-fill (Simulates realistic theater occupancy by booking random available seats)
+// 10. POST /api/shows/:showId/crowd-fill (Simulates realistic theater occupancy by booking random available seats)
 export async function simulateCrowdFill(req, res) {
     const showId = Number(req.params.showId);
     const count = Math.min(25, Math.max(1, Number(req.body?.count) || 12));

@@ -5,6 +5,7 @@ import {
     createMovieAndShow,
     deleteCustomShow,
     runPresetAnalyticsQuery,
+    runCustomReadOnlySql,
     resetShowDemo,
     forceExpireHolds,
     toggleFlashSale,
@@ -18,6 +19,7 @@ router.post('/shows/create', createMovieAndShow);
 router.get('/shows/:showId', getShowById);
 router.delete('/shows/:showId', deleteCustomShow);
 router.get('/analytics/query/:queryKey', runPresetAnalyticsQuery);
+router.post('/analytics/sql', runCustomReadOnlySql);
 router.post('/shows/:showId/reset', resetShowDemo);
 router.post('/shows/:showId/force-expire', forceExpireHolds);
 router.post('/shows/:showId/toggle-flash-sale', toggleFlashSale);

@@ -140,6 +140,12 @@ export const deleteCustomShowApi = (showId) =>
 export const runPresetQueryApi = (queryKey) =>
     request(`/analytics/query/${queryKey}`);
 
+export const runCustomSqlApi = (sql) =>
+    request('/analytics/sql', {
+        method: 'POST',
+        body: JSON.stringify({ sql })
+    });
+
 export const resetShowApi = (showId) =>
     request(`/shows/${showId}/reset`, { method: 'POST' });
 

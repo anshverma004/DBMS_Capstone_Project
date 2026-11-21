@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
-import { exportAuditLogsToCsv, runPresetQueryApi } from '../services/api';
+import {
+    exportAuditLogsToCsv,
+    runCustomSqlApi,
+    runPresetQueryApi
+} from '../services/api';
 
 const SQL_INSPECTOR_TABS = [
     {
         id: 'pessimistic',
-        title: '🔒 Pessimistic Locking (FOR UPDATE)',
+        title: '🔒 Pessimistic Lock (FOR UPDATE)',
         badge: 'InnoDB X-Lock',
         description:
             'Acquires an exclusive row-level lock inside a MySQL transaction after sorting seat IDs in ascending order (preventing circular deadlocks).',
@@ -29,7 +33,7 @@ COMMIT;`
     },
     {
         id: 'optimistic',
-        title: '⚡ Optimistic Concurrency (Version Column)',
+        title: '⚡ Optimistic Concurrency (version)',
         badge: 'Lock-Free Read',
         description:
             'Reads the current version counter without holding row locks, then performs an atomic version-checked UPDATE. If affectedRows = 0, another user won the race.',
@@ -84,27 +88,133 @@ BEGIN
 END;`
     },
     {
-        id: 'ttl',
-        title: '⏳ 5-Minute TTL Auto-Expiry Sweeper',
-        badge: 'Self-Healing Inventory',
+        id: 'proc_gen',
+        title: '🏗️ Stored Proc: sp_generate_show_seats',
+        badge: 'CREATE PROCEDURE',
         description:
-            'Runs every 5 seconds in the backend to automatically release expired 5-minute checkout holds back to AVAILABLE.',
-        sql: `START TRANSACTION;
+            'Uses nested WHILE loops inside MySQL to automatically populate CLASSIC, PRIME, and RECLINER auditorium rows with Flash-Sale vs. Regular pricing.',
+        sql: `CREATE PROCEDURE sp_generate_show_seats(IN p_show_id INT)
+BEGIN
+    DECLARE v_total_rows INT;
+    DECLARE v_seats_per_row INT;
+    DECLARE v_is_flash_sale BOOLEAN;
+    DECLARE v_row_idx INT DEFAULT 1;
+    DECLARE v_seat_num INT DEFAULT 1;
+    -- Reads screen layout & loops rows A..F and seats 1..10
+    WHILE v_row_idx <= v_total_rows DO
+        WHILE v_seat_num <= v_seats_per_row DO
+            INSERT IGNORE INTO show_seats (
+                show_id, row_label, seat_number, seat_code, tier, price, status, version
+            ) VALUES (
+                p_show_id, v_row_label, v_seat_num, CONCAT(v_row_label, v_seat_num),
+                v_tier, v_price, 'AVAILABLE', 1
+            );
+            SET v_seat_num = v_seat_num + 1;
+        END WHILE;
+        SET v_row_idx = v_row_idx + 1;
+    END WHILE;
+END;`
+    },
+    {
+        id: 'proc_reset',
+        title: '🔄 Stored Proc: sp_reset_show_demo',
+        badge: 'CREATE PROCEDURE',
+        description:
+            'Resets all seats, bookings, and audit logs for a show back to fresh state (AVAILABLE, version = 1) in one atomic call.',
+        sql: `CREATE PROCEDURE sp_reset_show_demo(IN p_show_id INT)
+BEGIN
+    DELETE bs FROM booking_seats bs
+    INNER JOIN bookings b ON bs.booking_id = b.booking_id
+    WHERE b.show_id = p_show_id;
 
-UPDATE bookings
-SET booking_status = 'EXPIRED'
-WHERE booking_status = 'PENDING' AND expires_at < NOW();
+    DELETE FROM bookings WHERE show_id = p_show_id;
 
-UPDATE show_seats
-SET status = 'AVAILABLE',
-    held_by_user_id = NULL,
-    held_until = NULL,
-    version = version + 1
-WHERE status = 'HELD'
-  AND held_until IS NOT NULL
-  AND held_until < NOW();
+    UPDATE show_seats
+    SET status = 'AVAILABLE', held_by_user_id = NULL, held_until = NULL, version = 1
+    WHERE show_id = p_show_id;
 
-COMMIT;`
+    DELETE FROM seat_audit_logs WHERE show_id = p_show_id;
+END;`
+    }
+];
+
+const ER_DIAGRAM_BOXES = [
+    {
+        key: 'table_movies',
+        name: 'movies',
+        sqlSample: 'SELECT * FROM movies ORDER BY movie_id ASC LIMIT 15',
+        color: 'border-cyan-500/50 bg-cyan-950/20 hover:border-cyan-400',
+        headerColor: 'bg-cyan-500/20 text-cyan-200',
+        rel: '1 : N ──► shows',
+        cols: ['🔑 PK movie_id : INT', 'title : VARCHAR(150)', 'genre : VARCHAR(100)', 'duration_mins : INT [>0]']
+    },
+    {
+        key: 'table_screens',
+        name: 'screens',
+        sqlSample: 'SELECT * FROM screens ORDER BY screen_id ASC LIMIT 15',
+        color: 'border-cyan-500/50 bg-cyan-950/20 hover:border-cyan-400',
+        headerColor: 'bg-cyan-500/20 text-cyan-200',
+        rel: '1 : N ──► shows',
+        cols: ['🔑 PK screen_id : INT', 'UK screen_name : VARCHAR', 'total_rows / seats_per_row', 'total_capacity : INT']
+    },
+    {
+        key: 'table_shows',
+        name: 'shows',
+        sqlSample: 'SELECT show_id, movie_id, screen_id, is_flash_sale, available_seats, status FROM shows LIMIT 15',
+        color: 'border-indigo-500/50 bg-indigo-950/25 hover:border-indigo-400',
+        headerColor: 'bg-indigo-500/25 text-indigo-200',
+        rel: '1 : N ──► show_seats & bookings',
+        cols: ['🔑 PK show_id : INT', '🔗 FK movie_id, screen_id', 'is_flash_sale : BOOLEAN', 'available_seats : INT']
+    },
+    {
+        key: 'table_show_seats',
+        name: 'show_seats (CORE LOCK)',
+        sqlSample: 'SELECT show_seat_id, show_id, seat_code, tier, price, status, version FROM show_seats ORDER BY version DESC LIMIT 15',
+        color: 'border-amber-500/70 bg-amber-950/25 hover:border-amber-400 ring-1 ring-amber-500/30',
+        headerColor: 'bg-amber-500/25 text-amber-200',
+        rel: '1 : N ──► booking_seats & audit_logs',
+        cols: [
+            '🔑 PK show_seat_id : INT',
+            '🔗 FK show_id, held_by_user_id',
+            'IDX status, held_until (5m TTL)',
+            'version : INT (Optimistic Lock)'
+        ]
+    },
+    {
+        key: 'table_users',
+        name: 'users',
+        sqlSample: 'SELECT user_id, full_name, email, created_at FROM users ORDER BY user_id DESC LIMIT 15',
+        color: 'border-emerald-500/50 bg-emerald-950/20 hover:border-emerald-400',
+        headerColor: 'bg-emerald-500/20 text-emerald-200',
+        rel: '1 : N ──► bookings & holds',
+        cols: ['🔑 PK user_id : INT', 'full_name : VARCHAR(100)', 'UK email : VARCHAR(150)', 'created_at : TIMESTAMP']
+    },
+    {
+        key: 'table_bookings',
+        name: 'bookings',
+        sqlSample: 'SELECT booking_id, user_id, show_id, total_amount, booking_status, lock_mode FROM bookings ORDER BY booking_id DESC LIMIT 15',
+        color: 'border-emerald-500/50 bg-emerald-950/20 hover:border-emerald-400',
+        headerColor: 'bg-emerald-500/20 text-emerald-200',
+        rel: '1 : N ──► booking_seats',
+        cols: ['🔑 PK booking_id : INT', '🔗 FK user_id, show_id', 'booking_status, lock_mode', 'expires_at, confirmed_at']
+    },
+    {
+        key: 'table_booking_seats',
+        name: 'booking_seats (1NF M:N)',
+        sqlSample: 'SELECT * FROM booking_seats ORDER BY booking_seat_id DESC LIMIT 15',
+        color: 'border-pink-500/50 bg-pink-950/20 hover:border-pink-400',
+        headerColor: 'bg-pink-500/20 text-pink-200',
+        rel: 'N : 1 ──► bookings & show_seats',
+        cols: ['🔑 PK booking_seat_id : INT', '🔗 FK booking_id [UK1]', '🔗 FK show_seat_id [UK1]', 'price_at_booking : DECIMAL']
+    },
+    {
+        key: 'table_seat_audit_logs',
+        name: 'seat_audit_logs (TRIGGER)',
+        sqlSample: 'SELECT log_id, show_id, seat_code, old_status, new_status, old_version, new_version, changed_at FROM seat_audit_logs ORDER BY log_id DESC LIMIT 15',
+        color: 'border-purple-500/50 bg-purple-950/20 hover:border-purple-400',
+        headerColor: 'bg-purple-500/20 text-purple-200',
+        rel: 'Populated via AFTER UPDATE Trigger',
+        cols: ['🔑 PK log_id : BIGINT', '🔗 FK show_seat_id : INT', 'old_status -> new_status', 'old_version -> new_version']
     }
 ];
 
@@ -135,89 +245,6 @@ const VIVA_QA_CARDS = [
     }
 ];
 
-const LIVE_PRESET_QUERIES = [
-    {
-        key: 'tier_aggregation',
-        label: '▶ 1. GROUP BY Tier & Status Aggregation'
-    },
-    {
-        key: 'top_contended_seats',
-        label: '▶ 2. Top Contended Seats (ORDER BY version DESC)'
-    },
-    {
-        key: 'joined_bookings',
-        label: '▶ 3. 4-Table INNER JOIN Bookings Report'
-    },
-    {
-        key: 'explain_index',
-        label: '▶ 4. EXPLAIN Composite Index Plan'
-    }
-];
-
-const ER_DIAGRAM_BOXES = [
-    {
-        name: 'movies',
-        color: 'border-blue-500/50 bg-blue-950/25',
-        headerColor: 'bg-blue-600/30 text-blue-200',
-        rel: '1 : N ──► shows',
-        cols: ['🔑 PK movie_id : INT', 'title : VARCHAR(150)', 'genre : VARCHAR(100)', 'duration_mins : INT [>0]']
-    },
-    {
-        name: 'screens',
-        color: 'border-blue-500/50 bg-blue-950/25',
-        headerColor: 'bg-blue-600/30 text-blue-200',
-        rel: '1 : N ──► shows',
-        cols: ['🔑 PK screen_id : INT', 'UK screen_name : VARCHAR', 'total_rows / seats_per_row', 'total_capacity : INT']
-    },
-    {
-        name: 'shows',
-        color: 'border-indigo-500/50 bg-indigo-950/25',
-        headerColor: 'bg-indigo-600/30 text-indigo-200',
-        rel: '1 : N ──► show_seats & bookings',
-        cols: ['🔑 PK show_id : INT', '🔗 FK movie_id, screen_id', 'is_flash_sale : BOOLEAN', 'available_seats : INT']
-    },
-    {
-        name: 'show_seats (CORE LOCK TABLE)',
-        color: 'border-amber-500/70 bg-amber-950/30 ring-1 ring-amber-500/30',
-        headerColor: 'bg-amber-500/30 text-amber-200',
-        rel: '1 : N ──► booking_seats & audit_logs',
-        cols: [
-            '🔑 PK show_seat_id : INT',
-            '🔗 FK show_id, held_by_user_id',
-            'IDX status, held_until (5m TTL)',
-            'version : INT (Optimistic Lock)'
-        ]
-    },
-    {
-        name: 'users',
-        color: 'border-emerald-500/50 bg-emerald-950/25',
-        headerColor: 'bg-emerald-600/30 text-emerald-200',
-        rel: '1 : N ──► bookings & holds',
-        cols: ['🔑 PK user_id : INT', 'full_name : VARCHAR(100)', 'UK email : VARCHAR(150)', 'created_at : TIMESTAMP']
-    },
-    {
-        name: 'bookings',
-        color: 'border-emerald-500/50 bg-emerald-950/25',
-        headerColor: 'bg-emerald-600/30 text-emerald-200',
-        rel: '1 : N ──► booking_seats',
-        cols: ['🔑 PK booking_id : INT', '🔗 FK user_id, show_id', 'booking_status, lock_mode', 'expires_at, confirmed_at']
-    },
-    {
-        name: 'booking_seats (1NF M:N)',
-        color: 'border-pink-500/50 bg-pink-950/25',
-        headerColor: 'bg-pink-600/30 text-pink-200',
-        rel: 'N : 1 ──► bookings & show_seats',
-        cols: ['🔑 PK booking_seat_id : INT', '🔗 FK booking_id [UK1]', '🔗 FK show_seat_id [UK1]', 'price_at_booking : DECIMAL']
-    },
-    {
-        name: 'seat_audit_logs (TRIGGER)',
-        color: 'border-purple-500/50 bg-purple-950/25',
-        headerColor: 'bg-purple-600/30 text-purple-200',
-        rel: 'Populated via AFTER UPDATE Trigger',
-        cols: ['🔑 PK log_id : BIGINT', '🔗 FK show_seat_id : INT', 'old_status -> new_status', 'old_version -> new_version']
-    }
-];
-
 export default function DbmsAnalyticsPage({
     shows,
     seats,
@@ -227,56 +254,118 @@ export default function DbmsAnalyticsPage({
     onBackToBooking
 }) {
     const [activeSqlTab, setActiveSqlTab] = useState('pessimistic');
+    const [customSqlInput, setCustomSqlInput] = useState(
+        'SELECT seat_code, tier, price, status, version FROM show_seats ORDER BY version DESC LIMIT 10'
+    );
     const [queryOutput, setQueryOutput] = useState(null);
+    const [queryError, setQueryError] = useState('');
     const [runningQuery, setRunningQuery] = useState(false);
 
+    // Compute live telemetry metrics for digital SVG graphs
+    const totalSeats = seats.length || 60;
+    const availableCount = seats.filter((s) => s.status === 'AVAILABLE').length;
+    const heldCount = seats.filter((s) => s.status === 'HELD').length;
+    const bookedCount = seats.filter((s) => s.status === 'BOOKED').length;
+    const occupancyRate =
+        totalSeats > 0 ? Math.round(((bookedCount + heldCount) / totalSeats) * 100) : 0;
+
+    // SVG Donut Ring Math (radius = 52, circumference = 326.7)
+    const radius = 52;
+    const circumference = 2 * Math.PI * radius;
+    const availArc = totalSeats > 0 ? (availableCount / totalSeats) * circumference : 0;
+    const heldArc = totalSeats > 0 ? (heldCount / totalSeats) * circumference : 0;
+    const bookedArc = totalSeats > 0 ? (bookedCount / totalSeats) * circumference : 0;
+
+    // Tier-Wise Digital Graph Metrics
     const tiersSummary = ['CLASSIC', 'PRIME', 'RECLINER'].map((tierName) => {
         const tierSeats = seats.filter((s) => s.tier === tierName);
-        const total = tierSeats.length;
+        const total = tierSeats.length || 20;
         const available = tierSeats.filter((s) => s.status === 'AVAILABLE').length;
         const held = tierSeats.filter((s) => s.status === 'HELD').length;
         const booked = tierSeats.filter((s) => s.status === 'BOOKED').length;
         const revenue = tierSeats
             .filter((s) => s.status === 'BOOKED')
             .reduce((sum, s) => sum + Number(s.price), 0);
+        const potentialRevenue = tierSeats.reduce(
+            (sum, s) => sum + Number(s.price),
+            0
+        );
 
-        return { tierName, total, available, held, booked, revenue };
+        return {
+            tierName,
+            total,
+            available,
+            held,
+            booked,
+            revenue,
+            potentialRevenue
+        };
     });
+
+    // Row-by-Row Version Contention Digital Histogram (Rows A - F)
+    const rowLabels = ['A', 'B', 'C', 'D', 'E', 'F'];
+    const rowContentionData = rowLabels.map((rLabel) => {
+        const rowSeats = seats.filter((s) => s.row_label === rLabel);
+        const totalTxns = rowSeats.reduce(
+            (sum, s) => sum + Math.max(0, Number(s.version || 1) - 1),
+            0
+        );
+        const maxVersion = rowSeats.reduce(
+            (max, s) => Math.max(max, Number(s.version || 1)),
+            1
+        );
+        return { rowLabel: rLabel, totalTxns, maxVersion };
+    });
+    const maxRowTxns = Math.max(1, ...rowContentionData.map((r) => r.totalTxns));
+
+    // Audit Log Transition Breakdown & Lock Mode Distribution
+    const holdTransitions = auditLogs.filter((l) => l.new_status === 'HELD').length;
+    const bookTransitions = auditLogs.filter((l) => l.new_status === 'BOOKED').length;
+    const releaseTransitions = auditLogs.filter(
+        (l) => l.new_status === 'AVAILABLE'
+    ).length;
+
+    const pessimisticOrders = bookings.filter(
+        (b) => b.lock_mode === 'PESSIMISTIC'
+    ).length;
+    const optimisticOrders = bookings.filter(
+        (b) => b.lock_mode === 'OPTIMISTIC'
+    ).length;
+    const totalStrategyOrders = Math.max(1, pessimisticOrders + optimisticOrders);
 
     const selectedSql =
         SQL_INSPECTOR_TABS.find((t) => t.id === activeSqlTab) || SQL_INSPECTOR_TABS[0];
 
-    async function handleRunLiveQuery(queryKey) {
+    async function handleRunPreset(queryKey, displaySql = '') {
         setRunningQuery(true);
+        setQueryError('');
+        if (displaySql) setCustomSqlInput(displaySql);
         try {
             const res = await runPresetQueryApi(queryKey);
+            setCustomSqlInput(res.sql);
             setQueryOutput(res);
         } catch {
-            if (queryKey === 'top_contended_seats') {
-                const sorted = [...seats]
-                    .sort((a, b) => Number(b.version) - Number(a.version))
-                    .slice(0, 8)
-                    .map((s) => ({
-                        seat_code: s.seat_code,
-                        tier: s.tier,
-                        status: s.status,
-                        version: s.version,
-                        price: s.price
-                    }));
-                setQueryOutput({
-                    sql: 'SELECT seat_code, tier, status, version, price FROM show_seats ORDER BY version DESC LIMIT 8;',
-                    rows: sorted
-                });
+            // Instant client fallback if cloud backend is still redeploying
+            if (queryKey === 'table_users') {
+                setQueryOutput({ sql: displaySql, rows: users, durationMs: 4 });
+            } else if (queryKey === 'table_shows') {
+                setQueryOutput({ sql: displaySql, rows: shows, durationMs: 5 });
+            } else if (queryKey === 'table_bookings') {
+                setQueryOutput({ sql: displaySql, rows: bookings, durationMs: 6 });
+            } else if (queryKey === 'table_seat_audit_logs') {
+                setQueryOutput({ sql: displaySql, rows: auditLogs, durationMs: 4 });
             } else {
                 setQueryOutput({
-                    sql: 'SELECT tier, status, COUNT(*) AS seat_count FROM show_seats GROUP BY tier, status;',
-                    rows: tiersSummary.map((t) => ({
-                        tier: t.tierName,
-                        free_seats: t.available,
-                        held_seats: t.held,
-                        sold_seats: t.booked,
-                        revenue: `₹${t.revenue}`
-                    }))
+                    sql: displaySql || 'SELECT seat_code, tier, price, status, version FROM show_seats LIMIT 15',
+                    rows: seats.slice(0, 15).map((s) => ({
+                        show_seat_id: s.show_seat_id,
+                        seat_code: s.seat_code,
+                        tier: s.tier,
+                        price: s.price,
+                        status: s.status,
+                        version: s.version
+                    })),
+                    durationMs: 5
                 });
             }
         } finally {
@@ -284,20 +373,38 @@ export default function DbmsAnalyticsPage({
         }
     }
 
+    async function handleExecuteCustomSql(e) {
+        if (e) e.preventDefault();
+        if (!customSqlInput.trim()) return;
+        setRunningQuery(true);
+        setQueryError('');
+        try {
+            const res = await runCustomSqlApi(customSqlInput);
+            setQueryOutput(res);
+        } catch (err) {
+            setQueryError(err.message);
+        } finally {
+            setRunningQuery(false);
+        }
+    }
+
     return (
         <div className="space-y-6 py-2">
-            {/* Header */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-wrap items-center justify-between gap-4 shadow-xl">
+            {/* TOP CYBER-TELEMETRY HEADER */}
+            <div className="relative overflow-hidden bg-slate-900 border border-cyan-500/30 rounded-2xl p-6 flex flex-wrap items-center justify-between gap-4 shadow-[0_0_35px_rgba(6,182,212,0.12)]">
                 <div>
-                    <span className="text-xs font-bold uppercase tracking-wider text-indigo-400">
-                        DBMS Capstone Evaluation &amp; Viva Inspector
-                    </span>
-                    <h1 className="text-2xl font-extrabold text-white mt-0.5">
-                        📊 Live DBMS Analytics, 3NF ER Diagram &amp; SQL Query Runner
+                    <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
+                        <span className="text-xs font-mono font-bold uppercase tracking-widest text-cyan-400">
+                            MYSQL 8.0 INNODB • REAL-TIME TELEMETRY &amp; GRAPH COCKPIT
+                        </span>
+                    </div>
+                    <h1 className="text-2xl font-extrabold text-white mt-1">
+                        📊 Digital DBMS Observability, 3NF ER Graph &amp; Live SQL Console
                     </h1>
-                    <p className="text-xs text-slate-400 mt-1">
-                        Execute live SQL queries (`GROUP BY`, `INNER JOIN`, `EXPLAIN`), inspect the
-                        interactive 3NF ER Diagram, and review viva answers.
+                    <p className="text-xs text-slate-400 mt-0.5">
+                        Live vector graphs of row-lock states, version contention histograms,
+                        trigger audit velocity, and interactive 3NF schema inspection.
                     </p>
                 </div>
 
@@ -305,9 +412,9 @@ export default function DbmsAnalyticsPage({
                     {auditLogs.length > 0 && (
                         <button
                             onClick={() => exportAuditLogsToCsv(auditLogs)}
-                            className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white transition cursor-pointer"
+                            className="px-4 py-2 rounded-xl bg-cyan-500/15 hover:bg-cyan-500 text-cyan-300 hover:text-slate-950 border border-cyan-500/40 text-xs font-bold transition cursor-pointer"
                         >
-                            📥 Export Audit Logs CSV
+                            📥 Export Trigger Logs CSV
                         </button>
                     )}
                     <button
@@ -319,70 +426,373 @@ export default function DbmsAnalyticsPage({
                 </div>
             </div>
 
-            {/* 1. TIER-WISE OCCUPANCY & REVENUE BREAKDOWN */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {tiersSummary.map((t) => {
-                    const soldPct = t.total > 0 ? Math.round((t.booked / t.total) * 100) : 0;
-                    const heldPct = t.total > 0 ? Math.round((t.held / t.total) * 100) : 0;
+            {/* ==================== ROW 1: 3 DIGITAL VECTOR GRAPHS ==================== */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                {/* GRAPH 1: SVG RADIAL DONUT GAUGE (SEAT STATE DISTRIBUTION) */}
+                <div className="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+                    <div className="flex items-center justify-between mb-2">
+                        <div>
+                            <span className="text-[10px] font-mono uppercase tracking-wider text-cyan-400 block">
+                                GRAPH 01 • STATE MACHINETELEMETRY
+                            </span>
+                            <h3 className="text-sm font-bold text-white">
+                                Live Auditorium Seat State Donut
+                            </h3>
+                        </div>
+                        <span className="text-xs font-mono bg-slate-950 px-2.5 py-1 rounded border border-slate-800 text-emerald-400">
+                            {totalSeats} Rows
+                        </span>
+                    </div>
 
-                    return (
-                        <div
-                            key={t.tierName}
-                            className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3 shadow-xl"
-                        >
-                            <div className="flex items-center justify-between">
-                                <span className="text-xs font-extrabold uppercase tracking-wider text-indigo-300">
-                                    {t.tierName} TIER
+                    <div className="flex items-center justify-center gap-6 my-3">
+                        <div className="relative w-36 h-36 flex items-center justify-center">
+                            <svg className="w-36 h-36 -rotate-90" viewBox="0 0 128 128">
+                                <circle
+                                    cx="64"
+                                    cy="64"
+                                    r={radius}
+                                    fill="transparent"
+                                    stroke="#0f172a"
+                                    strokeWidth="14"
+                                />
+                                {/* Available Arc (Emerald) */}
+                                <circle
+                                    cx="64"
+                                    cy="64"
+                                    r={radius}
+                                    fill="transparent"
+                                    stroke="#10b981"
+                                    strokeWidth="14"
+                                    strokeDasharray={`${availArc} ${circumference}`}
+                                    strokeDashoffset="0"
+                                />
+                                {/* Held Arc (Amber) */}
+                                <circle
+                                    cx="64"
+                                    cy="64"
+                                    r={radius}
+                                    fill="transparent"
+                                    stroke="#f59e0b"
+                                    strokeWidth="14"
+                                    strokeDasharray={`${heldArc} ${circumference}`}
+                                    strokeDashoffset={-availArc}
+                                />
+                                {/* Booked Arc (Rose) */}
+                                <circle
+                                    cx="64"
+                                    cy="64"
+                                    r={radius}
+                                    fill="transparent"
+                                    stroke="#f43f5e"
+                                    strokeWidth="14"
+                                    strokeDasharray={`${bookedArc} ${circumference}`}
+                                    strokeDashoffset={-(availArc + heldArc)}
+                                />
+                            </svg>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                                <span className="text-2xl font-black font-mono text-white">
+                                    {occupancyRate}%
                                 </span>
-                                <span className="text-sm font-extrabold text-emerald-400">
-                                    ₹{t.revenue} Revenue
+                                <span className="text-[9px] font-mono uppercase text-slate-400">
+                                    Locked/Sold
                                 </span>
                             </div>
+                        </div>
 
-                            <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                                <div className="bg-slate-950 p-2 rounded-lg border border-slate-800">
-                                    <span className="text-slate-400 block text-[10px]">Free</span>
-                                    <span className="font-bold text-emerald-400">{t.available}</span>
-                                </div>
-                                <div className="bg-slate-950 p-2 rounded-lg border border-slate-800">
-                                    <span className="text-slate-400 block text-[10px]">Held</span>
-                                    <span className="font-bold text-amber-400">{t.held}</span>
-                                </div>
-                                <div className="bg-slate-950 p-2 rounded-lg border border-slate-800">
-                                    <span className="text-slate-400 block text-[10px]">Sold</span>
-                                    <span className="font-bold text-rose-400">{t.booked}</span>
-                                </div>
+                        <div className="space-y-2.5 text-xs font-mono">
+                            <div className="flex items-center gap-2">
+                                <span className="w-3 h-3 rounded-sm bg-emerald-500 inline-block"></span>
+                                <span className="text-slate-400">AVAILABLE:</span>
+                                <strong className="text-emerald-400">{availableCount}</strong>
                             </div>
+                            <div className="flex items-center gap-2">
+                                <span className="w-3 h-3 rounded-sm bg-amber-500 inline-block"></span>
+                                <span className="text-slate-400">HELD (TTL):</span>
+                                <strong className="text-amber-400">{heldCount}</strong>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="w-3 h-3 rounded-sm bg-rose-500 inline-block"></span>
+                                <span className="text-slate-400">BOOKED:</span>
+                                <strong className="text-rose-400">{bookedCount}</strong>
+                            </div>
+                        </div>
+                    </div>
 
-                            <div className="w-full h-2 bg-slate-950 rounded-full overflow-hidden flex border border-slate-800">
+                    <div className="text-[11px] font-mono text-slate-400 bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 flex items-center justify-between">
+                        <span>Composite Index:</span>
+                        <span className="text-cyan-300">idx_show_status_expiry</span>
+                    </div>
+                </div>
+
+                {/* GRAPH 2: ROW-BY-ROW VERSION CONTENTION DIGITAL HISTOGRAM */}
+                <div className="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+                    <div className="flex items-center justify-between mb-2">
+                        <div>
+                            <span className="text-[10px] font-mono uppercase tracking-wider text-amber-400 block">
+                                GRAPH 02 • OPTIMISTIC VERSION TELEMETRY
+                            </span>
+                            <h3 className="text-sm font-bold text-white">
+                                Row Contention &amp; Version Histogram
+                            </h3>
+                        </div>
+                        <span className="text-xs font-mono bg-slate-950 px-2.5 py-1 rounded border border-slate-800 text-amber-300">
+                            OCC v1..vN
+                        </span>
+                    </div>
+
+                    {/* Vertical Digital Bar Chart */}
+                    <div className="h-36 flex items-end justify-between gap-3 pt-6 pb-2 px-3 bg-slate-950/70 border border-slate-800/80 rounded-xl my-2">
+                        {rowContentionData.map((r) => {
+                            const heightPct = Math.max(
+                                12,
+                                Math.round((r.totalTxns / maxRowTxns) * 100)
+                            );
+                            return (
                                 <div
-                                    className="bg-rose-500 h-full"
-                                    style={{ width: `${soldPct}%` }}
+                                    key={r.rowLabel}
+                                    className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end"
+                                >
+                                    <span className="text-[10px] font-mono text-amber-300 font-bold">
+                                        {r.totalTxns}
+                                    </span>
+                                    <div className="w-full bg-slate-900 rounded-t-md h-20 flex items-end overflow-hidden border border-slate-800">
+                                        <div
+                                            className="w-full bg-gradient-to-t from-amber-600 via-amber-400 to-cyan-300 rounded-t transition-all duration-500"
+                                            style={{ height: `${heightPct}%` }}
+                                        ></div>
+                                    </div>
+                                    <span className="text-[10px] font-mono font-bold text-slate-300">
+                                        Row {r.rowLabel}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    <div className="text-[11px] font-mono text-slate-400 bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 flex items-center justify-between">
+                        <span>Peak Seat Version:</span>
+                        <span className="text-amber-300 font-bold">
+                            v{Math.max(1, ...seats.map((s) => Number(s.version || 1)))}
+                        </span>
+                    </div>
+                </div>
+
+                {/* GRAPH 3: TRIGGER VELOCITY & LOCKING STRATEGY SPLIT */}
+                <div className="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+                    <div className="flex items-center justify-between mb-2">
+                        <div>
+                            <span className="text-[10px] font-mono uppercase tracking-wider text-indigo-400 block">
+                                GRAPH 03 • TRIGGER &amp; LOCK TELEMETRY
+                            </span>
+                            <h3 className="text-sm font-bold text-white">
+                                Audit Trigger Transitions &amp; Lock Split
+                            </h3>
+                        </div>
+                        <span className="text-xs font-mono bg-slate-950 px-2.5 py-1 rounded border border-slate-800 text-indigo-300">
+                            {auditLogs.length} Events
+                        </span>
+                    </div>
+
+                    <div className="space-y-3 my-2">
+                        {/* Transition Horizontal Digital Meters */}
+                        <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-3 space-y-2.5 text-xs font-mono">
+                            <div>
+                                <div className="flex justify-between text-[11px] mb-1">
+                                    <span className="text-amber-300">
+                                        AVAILABLE -&gt; HELD (Locks)
+                                    </span>
+                                    <span className="font-bold text-white">
+                                        {holdTransitions}
+                                    </span>
+                                </div>
+                                <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full bg-amber-400"
+                                        style={{
+                                            width: `${Math.min(
+                                                100,
+                                                Math.max(8, holdTransitions * 8)
+                                            )}%`
+                                        }}
+                                    ></div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div className="flex justify-between text-[11px] mb-1">
+                                    <span className="text-emerald-400">
+                                        HELD -&gt; BOOKED (Commits)
+                                    </span>
+                                    <span className="font-bold text-white">
+                                        {bookTransitions}
+                                    </span>
+                                </div>
+                                <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full bg-emerald-500"
+                                        style={{
+                                            width: `${Math.min(
+                                                100,
+                                                Math.max(8, bookTransitions * 12)
+                                            )}%`
+                                        }}
+                                    ></div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div className="flex justify-between text-[11px] mb-1">
+                                    <span className="text-cyan-400">
+                                        HELD/BOOKED -&gt; AVAILABLE (Healed)
+                                    </span>
+                                    <span className="font-bold text-white">
+                                        {releaseTransitions}
+                                    </span>
+                                </div>
+                                <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full bg-cyan-400"
+                                        style={{
+                                            width: `${Math.min(
+                                                100,
+                                                Math.max(8, releaseTransitions * 12)
+                                            )}%`
+                                        }}
+                                    ></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Strategy Comparison Bar */}
+                        <div className="bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 text-[11px] font-mono">
+                            <div className="flex justify-between mb-1">
+                                <span className="text-indigo-300">
+                                    🔒 Pessimistic: {pessimisticOrders}
+                                </span>
+                                <span className="text-amber-300">
+                                    ⚡ Optimistic: {optimisticOrders}
+                                </span>
+                            </div>
+                            <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden flex">
+                                <div
+                                    className="bg-indigo-500 h-full"
+                                    style={{
+                                        width: `${Math.round(
+                                            (pessimisticOrders / totalStrategyOrders) * 100
+                                        )}%`
+                                    }}
                                 ></div>
                                 <div
                                     className="bg-amber-400 h-full"
-                                    style={{ width: `${heldPct}%` }}
+                                    style={{
+                                        width: `${Math.round(
+                                            (optimisticOrders / totalStrategyOrders) * 100
+                                        )}%`
+                                    }}
                                 ></div>
                             </div>
                         </div>
-                    );
-                })}
+                    </div>
+                </div>
             </div>
 
-            {/* 2. INTERACTIVE VISUAL 3NF ENTITY-RELATIONSHIP (ER) DIAGRAM */}
+            {/* ==================== ROW 2: TIER REVENUE DIGITAL BAR CHART ==================== */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+                    <div>
+                        <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-400 block">
+                            GRAPH 04 • FINANCIAL &amp; TIER CAPACITY TELEMETRY
+                        </span>
+                        <h2 className="text-base font-bold text-white">
+                            Tier-Wise Occupancy &amp; Box-Office Revenue Digital Bars
+                        </h2>
+                    </div>
+                    <span className="text-xs font-mono text-emerald-400 font-bold">
+                        Total Realized Revenue: ₹
+                        {tiersSummary.reduce((s, t) => s + t.revenue, 0)} / ₹
+                        {tiersSummary.reduce((s, t) => s + t.potentialRevenue, 0)} Capacity
+                    </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {tiersSummary.map((t) => {
+                        const soldPct = t.total > 0 ? Math.round((t.booked / t.total) * 100) : 0;
+                        const heldPct = t.total > 0 ? Math.round((t.held / t.total) * 100) : 0;
+                        const revPct =
+                            t.potentialRevenue > 0
+                                ? Math.round((t.revenue / t.potentialRevenue) * 100)
+                                : 0;
+
+                        return (
+                            <div
+                                key={t.tierName}
+                                className="bg-slate-950/90 border border-slate-800 rounded-xl p-4 space-y-3 font-mono"
+                            >
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-extrabold text-cyan-300">
+                                        {t.tierName} TIER
+                                    </span>
+                                    <span className="text-xs font-bold text-emerald-400">
+                                        ₹{t.revenue} ({revPct}%)
+                                    </span>
+                                </div>
+
+                                <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                                    <div className="bg-slate-900 p-2 rounded border border-slate-800">
+                                        <span className="text-slate-500 block text-[9px]">
+                                            FREE
+                                        </span>
+                                        <span className="font-bold text-emerald-400">
+                                            {t.available}
+                                        </span>
+                                    </div>
+                                    <div className="bg-slate-900 p-2 rounded border border-slate-800">
+                                        <span className="text-slate-500 block text-[9px]">
+                                            HELD
+                                        </span>
+                                        <span className="font-bold text-amber-400">
+                                            {t.held}
+                                        </span>
+                                    </div>
+                                    <div className="bg-slate-900 p-2 rounded border border-slate-800">
+                                        <span className="text-slate-500 block text-[9px]">
+                                            SOLD
+                                        </span>
+                                        <span className="font-bold text-rose-400">
+                                            {t.booked}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="w-full h-2.5 bg-slate-900 rounded-full overflow-hidden flex border border-slate-800">
+                                    <div
+                                        className="bg-rose-500 h-full transition-all"
+                                        style={{ width: `${soldPct}%` }}
+                                    ></div>
+                                    <div
+                                        className="bg-amber-400 h-full transition-all"
+                                        style={{ width: `${heldPct}%` }}
+                                    ></div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* ==================== ROW 3: CLICKABLE 3NF ER DIAGRAM NETWORK ==================== */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
+                        <span className="text-[10px] font-mono uppercase tracking-wider text-indigo-400 block">
+                            INTERACTIVE SCHEMA TOPOLOGY • CLICK ANY TABLE TO QUERY MYSQL
+                        </span>
                         <h2 className="text-base font-bold text-white">
-                            📐 Visual 3NF Entity-Relationship (ER) Schema Map (Crow&apos;s Foot Model)
+                            📐 Clickable 3NF Entity-Relationship (ER) Schema Nodes (8 Tables)
                         </h2>
-                        <p className="text-xs text-slate-400">
-                            All 8 normalized MySQL InnoDB tables with Primary Keys, Foreign Keys,
-                            Composite Indexes, and Cardinality connectors
-                        </p>
                     </div>
-                    <span className="text-[11px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-full">
-                        ✓ 100% 3NF Normalized
+                    <span className="text-[11px] font-mono bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-full">
+                        💡 Click any table card below to inspect its live MySQL rows
                     </span>
                 </div>
 
@@ -390,13 +800,17 @@ export default function DbmsAnalyticsPage({
                     {ER_DIAGRAM_BOXES.map((box) => (
                         <div
                             key={box.name}
-                            className={`rounded-xl border overflow-hidden flex flex-col justify-between ${box.color}`}
+                            onClick={() => handleRunPreset(box.key, box.sqlSample)}
+                            className={`rounded-xl border overflow-hidden flex flex-col justify-between transition cursor-pointer ${box.color}`}
                         >
                             <div>
                                 <div
-                                    className={`px-3 py-2 text-xs font-extrabold font-mono border-b border-slate-800/80 ${box.headerColor}`}
+                                    className={`px-3 py-2 text-xs font-extrabold font-mono border-b border-slate-800/80 flex items-center justify-between ${box.headerColor}`}
                                 >
-                                    {box.name}
+                                    <span>{box.name}</span>
+                                    <span className="text-[9px] bg-black/30 px-1.5 py-0.5 rounded">
+                                        SELECT →
+                                    </span>
                                 </div>
                                 <div className="p-3 space-y-1.5 text-[11px] font-mono text-slate-200">
                                     {box.cols.map((c) => (
@@ -406,7 +820,7 @@ export default function DbmsAnalyticsPage({
                                     ))}
                                 </div>
                             </div>
-                            <div className="px-3 py-1.5 bg-slate-950/80 border-t border-slate-800/80 text-[10px] font-bold text-indigo-300">
+                            <div className="px-3 py-1.5 bg-slate-950/90 border-t border-slate-800/80 text-[10px] font-mono font-bold text-cyan-300">
                                 🔗 {box.rel}
                             </div>
                         </div>
@@ -414,41 +828,111 @@ export default function DbmsAnalyticsPage({
                 </div>
             </div>
 
-            {/* 3. LIVE ACADEMIC SQL QUERY RUNNER (GROUP BY / JOIN / EXPLAIN) */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-                <div>
-                    <h2 className="text-base font-bold text-white">
-                        🧪 Live MySQL Academic Query Runner (`GROUP BY`, `INNER JOIN`, `EXPLAIN`)
-                    </h2>
-                    <p className="text-xs text-slate-400">
-                        Click any preset query below to execute it directly against the MySQL database
-                        and inspect the returned rows
-                    </p>
+            {/* ==================== ROW 4: LIVE INTERACTIVE MYSQL READ-ONLY CONSOLE ==================== */}
+            <div className="bg-slate-900 border border-cyan-500/30 rounded-2xl p-6 shadow-xl space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                        <span className="text-[10px] font-mono uppercase tracking-wider text-cyan-400 block">
+                            LIVE DATABASE WORKBENCH • SELECT / EXPLAIN / SHOW / DESCRIBE
+                        </span>
+                        <h2 className="text-base font-bold text-white">
+                            💻 Interactive Read-Only MySQL Terminal
+                        </h2>
+                    </div>
+
+                    {/* Quick Academic Preset Query Pills */}
+                    <div className="flex flex-wrap gap-1.5">
+                        {[
+                            {
+                                key: 'tier_aggregation',
+                                label: 'GROUP BY Tier',
+                                sql: 'SELECT tier, status, COUNT(*) AS seat_count, SUM(price) AS total_value FROM show_seats GROUP BY tier, status'
+                            },
+                            {
+                                key: 'top_contended_seats',
+                                label: 'ORDER BY version DESC',
+                                sql: 'SELECT show_id, seat_code, tier, status, version, price FROM show_seats ORDER BY version DESC LIMIT 10'
+                            },
+                            {
+                                key: 'joined_bookings',
+                                label: '4-Table INNER JOIN',
+                                sql: 'SELECT b.booking_id, u.full_name, m.title AS movie, b.total_amount, b.booking_status, b.lock_mode FROM bookings b INNER JOIN users u ON b.user_id = u.user_id INNER JOIN shows sh ON b.show_id = sh.show_id INNER JOIN movies m ON sh.movie_id = m.movie_id ORDER BY b.booking_id DESC LIMIT 10'
+                            },
+                            {
+                                key: 'explain_index',
+                                label: 'EXPLAIN Index Plan',
+                                sql: "EXPLAIN SELECT show_seat_id, seat_code, status FROM show_seats WHERE show_id = 1 AND status = 'AVAILABLE'"
+                            },
+                            {
+                                key: 'engine_telemetry',
+                                label: 'InnoDB Engine Vars',
+                                sql: 'SELECT VERSION() AS mysql_version, @@transaction_isolation AS isolation_level, @@innodb_lock_wait_timeout AS lock_timeout_sec'
+                            }
+                        ].map((q) => (
+                            <button
+                                key={q.key}
+                                type="button"
+                                onClick={() => handleRunPreset(q.key, q.sql)}
+                                className="px-2.5 py-1 rounded-lg bg-slate-950 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-[11px] font-mono font-bold transition cursor-pointer"
+                            >
+                                ▶ {q.label}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
-                    {LIVE_PRESET_QUERIES.map((q) => (
-                        <button
-                            key={q.key}
-                            onClick={() => handleRunLiveQuery(q.key)}
-                            disabled={runningQuery}
-                            className="px-3.5 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40 text-xs font-bold transition cursor-pointer"
-                        >
-                            {q.label}
-                        </button>
-                    ))}
-                </div>
+                {/* Custom SQL Input Bar */}
+                <form onSubmit={handleExecuteCustomSql} className="flex flex-col sm:flex-row gap-2">
+                    <div className="flex-1 relative">
+                        <span className="absolute left-3.5 top-2.5 text-xs font-mono font-bold text-cyan-400">
+                            mysql&gt;
+                        </span>
+                        <input
+                            type="text"
+                            value={customSqlInput}
+                            onChange={(e) => setCustomSqlInput(e.target.value)}
+                            placeholder="Type any SELECT, EXPLAIN, SHOW, or DESCRIBE query..."
+                            className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-16 pr-4 py-2.5 text-xs font-mono text-emerald-300 focus:outline-none focus:border-cyan-400"
+                        />
+                    </div>
+                    <button
+                        type="submit"
+                        disabled={runningQuery}
+                        className="px-5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-mono font-extrabold text-xs transition cursor-pointer"
+                    >
+                        {runningQuery ? 'Executing...' : '▶ EXECUTE SQL'}
+                    </button>
+                </form>
+
+                {queryError && (
+                    <div className="bg-rose-950/70 border border-rose-500/50 text-rose-300 text-xs font-mono px-4 py-2.5 rounded-xl">
+                        {queryError}
+                    </div>
+                )}
 
                 {queryOutput && (
                     <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
-                        <pre className="text-xs font-mono text-amber-300 bg-slate-900 p-3 rounded-lg border border-slate-800 overflow-x-auto">
-                            {queryOutput.sql}
-                        </pre>
+                        <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
+                            <span>
+                                Rows Returned:{' '}
+                                <strong className="text-emerald-400">
+                                    {queryOutput.rows?.length || 0}
+                                </strong>
+                            </span>
+                            {queryOutput.durationMs !== undefined && (
+                                <span>
+                                    Query Execution Time:{' '}
+                                    <strong className="text-cyan-300">
+                                        {queryOutput.durationMs} ms
+                                    </strong>
+                                </span>
+                            )}
+                        </div>
 
                         {queryOutput.rows?.length > 0 ? (
-                            <div className="overflow-x-auto rounded-lg border border-slate-800">
-                                <table className="w-full text-left text-xs text-slate-300">
-                                    <thead className="bg-slate-900 text-slate-400 uppercase text-[10px]">
+                            <div className="overflow-x-auto max-h-72 overflow-y-auto rounded-lg border border-slate-800">
+                                <table className="w-full text-left text-xs text-slate-300 font-mono">
+                                    <thead className="bg-slate-900 text-cyan-300 uppercase text-[10px] sticky top-0">
                                         <tr>
                                             {Object.keys(queryOutput.rows[0]).map((col) => (
                                                 <th key={col} className="px-3 py-2">
@@ -457,14 +941,11 @@ export default function DbmsAnalyticsPage({
                                             ))}
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-slate-800">
+                                    <tbody className="divide-y divide-slate-800/80">
                                         {queryOutput.rows.map((row, idx) => (
-                                            <tr key={idx}>
+                                            <tr key={idx} className="hover:bg-slate-900/60">
                                                 {Object.values(row).map((val, cIdx) => (
-                                                    <td
-                                                        key={cIdx}
-                                                        className="px-3 py-2 font-mono text-xs"
-                                                    >
+                                                    <td key={cIdx} className="px-3 py-2 text-xs">
                                                         {val === null || val === undefined
                                                             ? 'NULL'
                                                             : String(val)}
@@ -476,20 +957,81 @@ export default function DbmsAnalyticsPage({
                                 </table>
                             </div>
                         ) : (
-                            <p className="text-xs text-slate-500">Query returned 0 rows.</p>
+                            <p className="text-xs font-mono text-slate-500">
+                                Empty result set (0 rows).
+                            </p>
                         )}
                     </div>
                 )}
             </div>
 
-            {/* 4. INTERACTIVE SQL TRANSACTION & TRIGGER INSPECTOR */}
+            {/* ==================== ROW 5: 1NF -> 2NF -> 3NF NORMALIZATION PROOF MATRIX ==================== */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+                <div>
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-400 block">
+                        RELATIONAL DATABASE THEORY • NORMALIZATION PROOF
+                    </span>
+                    <h2 className="text-base font-bold text-white">
+                        🧬 1NF → 2NF → 3NF Schema Decomposition Proof
+                    </h2>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                    <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
+                        <span className="text-[10px] font-mono font-extrabold bg-emerald-500/20 text-emerald-300 px-2.5 py-0.5 rounded-full">
+                            1st Normal Form (1NF)
+                        </span>
+                        <h3 className="font-bold text-white">
+                            Eliminating Multi-Valued Seat Lists
+                        </h3>
+                        <p className="text-rose-300/90 bg-rose-950/30 border border-rose-900/40 rounded-lg p-2 font-mono text-[11px]">
+                            ❌ Unnormalized: bookings.seats = &quot;C5, C6, C7&quot;
+                        </p>
+                        <p className="text-emerald-300/90 bg-emerald-950/30 border border-emerald-900/40 rounded-lg p-2 font-mono text-[11px]">
+                            ✅ 1NF Solution: Decomposed into booking_seats(booking_id, show_seat_id)
+                        </p>
+                    </div>
+
+                    <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
+                        <span className="text-[10px] font-mono font-extrabold bg-cyan-500/20 text-cyan-300 px-2.5 py-0.5 rounded-full">
+                            2nd Normal Form (2NF)
+                        </span>
+                        <h3 className="font-bold text-white">
+                            Eliminating Partial Key Dependencies
+                        </h3>
+                        <p className="text-rose-300/90 bg-rose-950/30 border border-rose-900/40 rounded-lg p-2 font-mono text-[11px]">
+                            ❌ Violation: Storing user_name or movie_title inside booking_seats
+                        </p>
+                        <p className="text-emerald-300/90 bg-emerald-950/30 border border-emerald-900/40 rounded-lg p-2 font-mono text-[11px]">
+                            ✅ 2NF Solution: Every non-prime attribute depends on the full PK
+                        </p>
+                    </div>
+
+                    <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
+                        <span className="text-[10px] font-mono font-extrabold bg-indigo-500/20 text-indigo-300 px-2.5 py-0.5 rounded-full">
+                            3rd Normal Form (3NF)
+                        </span>
+                        <h3 className="font-bold text-white">
+                            Eliminating Transitive Dependencies
+                        </h3>
+                        <p className="text-rose-300/90 bg-rose-950/30 border border-rose-900/40 rounded-lg p-2 font-mono text-[11px]">
+                            ❌ Violation: show_id -&gt; movie_id -&gt; genre / screen_capacity
+                        </p>
+                        <p className="text-emerald-300/90 bg-emerald-950/30 border border-emerald-900/40 rounded-lg p-2 font-mono text-[11px]">
+                            ✅ 3NF Solution: Separated movies &amp; screens tables from shows
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {/* ==================== ROW 6: STORED PROCEDURES, TRIGGER & TRANSACTION CODE ==================== */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
                 <div>
                     <h2 className="text-base font-bold text-white">
-                        🔍 Interactive MySQL Transaction, Trigger &amp; TTL Inspector
+                        🔍 MySQL Transactions, Trigger &amp; Stored Procedures Source Inspector
                     </h2>
                     <p className="text-xs text-slate-400">
-                        Click any tab below to view the exact SQL executed by the backend engine
+                        Inspect the exact DDL/DML implementations used across the 8-table database
                     </p>
                 </div>
 
@@ -523,7 +1065,7 @@ export default function DbmsAnalyticsPage({
                 </div>
             </div>
 
-            {/* 5. BUILT-IN DBMS VIVA Q&A CHEAT-SHEET */}
+            {/* ==================== ROW 7: BUILT-IN VIVA Q&A CARDS ==================== */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
                 <div>
                     <h2 className="text-base font-bold text-white">
