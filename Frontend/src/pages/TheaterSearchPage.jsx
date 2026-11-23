@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { DATE_TABS, enrichShow } from '../constants/theaterData';
+import NowShowingStrip from '../components/theater/NowShowingStrip';
+import TheaterVenueCard from '../components/theater/TheaterVenueCard';
 import AuditoriumSpecsModal from '../components/theater/AuditoriumSpecsModal';
 
 export default function TheaterSearchPage({
@@ -43,8 +45,8 @@ export default function TheaterSearchPage({
                             Search Theaters in Your City
                         </h1>
                         <p className="text-xs text-slate-400 mt-1">
-                            Filter by city or mall name, pick a date and showtime slot, and click to
-                            view the live auditorium seat map.
+                            Pick a movie premiere below or filter by city and mall name to view the
+                            live auditorium seat map.
                         </p>
                     </div>
 
@@ -104,6 +106,11 @@ export default function TheaterSearchPage({
                 </div>
             </div>
 
+            <NowShowingStrip
+                shows={enrichedShows}
+                onSelectShow={onSelectTheaterShow}
+            />
+
             <div className="space-y-4">
                 <div className="flex items-center justify-between">
                     <h2 className="text-base font-bold text-white">
@@ -132,101 +139,12 @@ export default function TheaterSearchPage({
                 ) : (
                     <div className="space-y-4">
                         {filteredTheaters.map((sh) => (
-                            <div
+                            <TheaterVenueCard
                                 key={sh.show_id}
-                                className="bg-slate-900 border border-slate-800 hover:border-rose-500/50 rounded-2xl p-6 shadow-xl transition"
-                            >
-                                <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-                                    <div className="space-y-2.5 flex-1">
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                                                📍 {sh.city}
-                                            </span>
-                                            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-800 text-slate-300 border border-slate-700">
-                                                {sh.screen_name}
-                                            </span>
-                                            {sh.is_flash_sale ? (
-                                                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-amber-400 text-slate-950">
-                                                    ⚡ FLASH SALE • STARTING ₹99
-                                                </span>
-                                            ) : null}
-                                            <button
-                                                type="button"
-                                                onClick={() => setSpecsModalShow(sh)}
-                                                className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 cursor-pointer"
-                                            >
-                                                ℹ️ Auditorium &amp; Tier Specs
-                                            </button>
-                                        </div>
-
-                                        <h3
-                                            onClick={() =>
-                                                onSelectTheaterShow(sh.show_id, sh.showTimeLabel)
-                                            }
-                                            className="text-lg font-extrabold text-white hover:text-rose-400 transition cursor-pointer"
-                                        >
-                                            {sh.theaterName}
-                                        </h3>
-
-                                        <p className="text-xs text-slate-400">{sh.mallAddress}</p>
-
-                                        <div className="text-xs text-indigo-300 font-semibold pt-0.5">
-                                            🎬 Now Playing:{' '}
-                                            <span className="text-white">{sh.movie_title}</span> (
-                                            {sh.genre} • {sh.duration_mins}m • ⭐ {sh.rating})
-                                        </div>
-
-                                        <div className="flex flex-wrap items-center gap-2 pt-1">
-                                            {sh.amenities?.map((am) => (
-                                                <span
-                                                    key={am}
-                                                    className="text-[10px] bg-slate-950 text-slate-400 border border-slate-800 px-2.5 py-1 rounded-lg"
-                                                >
-                                                    ✓ {am}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 w-full lg:w-auto min-w-[340px] space-y-3">
-                                        <div className="flex items-center justify-between text-xs">
-                                            <span className="text-slate-400 font-semibold uppercase text-[10px] tracking-wider">
-                                                Select Showtime Slot
-                                            </span>
-                                            <span className="text-emerald-400 font-bold">
-                                                🟢 {sh.available_seats}/{sh.total_capacity} Seats Free
-                                            </span>
-                                        </div>
-
-                                        <div className="grid grid-cols-2 gap-2">
-                                            {(sh.timeSlots || []).map((slot) => (
-                                                <button
-                                                    key={slot.time}
-                                                    type="button"
-                                                    onClick={() =>
-                                                        onSelectTheaterShow(
-                                                            sh.show_id,
-                                                            `${slot.time} (${slot.tag})`
-                                                        )
-                                                    }
-                                                    className={`px-3 py-2 rounded-xl border text-center transition cursor-pointer ${
-                                                        slot.isFlash
-                                                            ? 'bg-amber-500/10 hover:bg-amber-500 hover:text-slate-950 border-amber-500/50 text-amber-300'
-                                                            : 'bg-emerald-950/40 hover:bg-emerald-600 hover:text-white border-emerald-500/50 text-emerald-300'
-                                                    }`}
-                                                >
-                                                    <div className="text-xs font-extrabold">
-                                                        {slot.time}
-                                                    </div>
-                                                    <div className="text-[9px] font-bold uppercase opacity-80">
-                                                        {slot.tag}
-                                                    </div>
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                                show={sh}
+                                onSelectTheaterShow={onSelectTheaterShow}
+                                onOpenSpecsModal={setSpecsModalShow}
+                            />
                         ))}
                     </div>
                 )}

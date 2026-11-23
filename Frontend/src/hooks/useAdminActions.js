@@ -8,6 +8,7 @@ import {
     simulateCrowdFillApi,
     simulateRaceApi
 } from '../services/api';
+import { saveCustomShowPoster } from '../constants/theaterData';
 
 export function useAdminActions({
     selectedShowId,
@@ -22,7 +23,11 @@ export function useAdminActions({
 }) {
     async function handleCreateMovieShow(payload) {
         try {
-            const res = await createMovieShowApi(payload);
+            const { posterUrl, ...apiPayload } = payload;
+            const res = await createMovieShowApi(apiPayload);
+            if (posterUrl) {
+                saveCustomShowPoster(res.showId, payload.title, posterUrl);
+            }
             setMessage(res.message);
             const showsData = await fetchShows();
             setShows(showsData);

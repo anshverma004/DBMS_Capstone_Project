@@ -6,7 +6,7 @@ export default function Footer({ loggedInUser, isAdmin, setCurrentPage }) {
             <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-400">
                 <div className="flex flex-wrap items-center gap-3">
                     <span className="font-extrabold text-white">
-                        BookMy<span className="text-rose-500">Show</span>
+                        Cine<span className="text-rose-500">Pulse</span>
                     </span>
                     <span>•</span>
                     <span className="flex items-center gap-1.5 text-emerald-400 font-semibold">

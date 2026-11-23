@@ -4,7 +4,7 @@ export const SOCKET_URL =
 
 export const API_BASE = `${SOCKET_URL}/api`;
 
-const LOCAL_USERS_KEY = 'bms_registered_users';
+const LOCAL_USERS_KEY = 'cinepulse_registered_users';
 
 export function getLocalRegisteredUsers() {
     try {

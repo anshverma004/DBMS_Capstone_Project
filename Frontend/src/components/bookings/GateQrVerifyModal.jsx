@@ -28,7 +28,7 @@ export default function GateQrVerifyModal({ inspectedTicket, onClose }) {
                         <div className="flex justify-between">
                             <span className="text-slate-400">PK booking_id:</span>
                             <span className="text-emerald-400 font-bold">
-                                {inspectedTicket.booking_id} (#BMS-
+                                {inspectedTicket.booking_id} (#CP-
                                 {1000 + Number(inspectedTicket.booking_id)})
                             </span>
                         </div>

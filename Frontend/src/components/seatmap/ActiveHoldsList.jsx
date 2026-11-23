@@ -118,7 +118,7 @@ export default function ActiveHoldsList({
                             >
                                 <div>
                                     <div className="font-bold text-emerald-300">
-                                        ✅ Ticket #BMS-{1000 + Number(b.booking_id)} • {b.user_name}
+                                        ✅ Ticket #CP-{1000 + Number(b.booking_id)} • {b.user_name}
                                     </div>
                                     <div className="text-slate-300 mt-0.5">
                                         Seats: <strong className="text-white">{b.seats_list}</strong> •

@@ -44,30 +44,42 @@ export default function AdminPage({
                             className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-5"
                         >
                             <div className="flex flex-wrap items-start justify-between gap-4">
-                                <div>
-                                    <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                                        <span className="text-xs font-mono bg-slate-950 text-slate-400 px-2.5 py-0.5 rounded border border-slate-800">
-                                            Show #{sh.show_id}
-                                        </span>
-                                        <span
-                                            className={`text-[11px] font-extrabold px-2.5 py-0.5 rounded-full ${
-                                                sh.is_flash_sale
-                                                    ? 'bg-amber-400 text-slate-950'
-                                                    : 'bg-slate-800 text-slate-300 border border-slate-700'
-                                            }`}
-                                        >
-                                            {sh.is_flash_sale
-                                                ? '⚡ FLASH SALE LIVE (₹99 / ₹149 / ₹249)'
-                                                : '🎬 REGULAR PRICING (₹180 / ₹280 / ₹450)'}
-                                        </span>
+                                <div className="flex items-start gap-4">
+                                    <img
+                                        src={sh.posterUrl}
+                                        alt={sh.movie_title}
+                                        onError={(e) => {
+                                            e.currentTarget.src = '/images/poster-cosmic-wars.jpg';
+                                        }}
+                                        className="w-16 h-24 rounded-xl object-cover border border-slate-700 shadow-lg shrink-0"
+                                    />
+                                    <div>
+                                        <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                                            <span className="text-xs font-mono bg-slate-950 text-slate-400 px-2.5 py-0.5 rounded border border-slate-800">
+                                                Show #{sh.show_id}
+                                            </span>
+                                            <span
+                                                className={`text-[11px] font-extrabold px-2.5 py-0.5 rounded-full ${
+                                                    sh.is_flash_sale
+                                                        ? 'bg-amber-400 text-slate-950'
+                                                        : 'bg-slate-800 text-slate-300 border border-slate-700'
+                                                }`}
+                                            >
+                                                {sh.is_flash_sale
+                                                    ? '⚡ FLASH SALE LIVE (₹99 / ₹149 / ₹249)'
+                                                    : '🎬 REGULAR PRICING (₹180 / ₹280 / ₹450)'}
+                                            </span>
+                                        </div>
+                                        <h3 className="text-lg font-extrabold text-white">
+                                            {sh.movie_title}
+                                        </h3>
+                                        <p className="text-xs text-slate-400 mt-0.5">
+                                            📍 {sh.theaterName} •{' '}
+                                            <strong className="text-indigo-300">
+                                                {sh.screen_name}
+                                            </strong>
+                                        </p>
                                     </div>
-                                    <h3 className="text-lg font-extrabold text-white">
-                                        {sh.movie_title}
-                                    </h3>
-                                    <p className="text-xs text-slate-400 mt-0.5">
-                                        📍 {sh.theaterName} •{' '}
-                                        <strong className="text-indigo-300">{sh.screen_name}</strong>
-                                    </p>
                                 </div>
 
                                 <div className="flex items-center gap-4">

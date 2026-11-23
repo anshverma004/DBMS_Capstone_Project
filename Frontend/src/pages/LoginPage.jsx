@@ -32,13 +32,21 @@ export default function LoginPage({
     return (
         <div className="max-w-md mx-auto py-10">
             <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
-                <div className="px-6 py-5 bg-gradient-to-r from-indigo-700 to-rose-600">
-                    <h2 className="text-lg font-extrabold text-white">
-                        Log In to BookMyShow
-                    </h2>
-                    <p className="text-xs text-rose-100 mt-0.5">
-                        Sign in with your registered email and password
-                    </p>
+                <div className="relative h-28 overflow-hidden">
+                    <img
+                        src="/images/hero-cinema.jpg"
+                        alt="CinePulse Cinema"
+                        className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-indigo-950/60" />
+                    <div className="absolute inset-x-6 bottom-4">
+                        <h2 className="text-lg font-extrabold text-white">
+                            Log In to Cine<span className="text-rose-400">Pulse</span>
+                        </h2>
+                        <p className="text-xs text-slate-200 mt-0.5">
+                            Sign in with your registered email and password
+                        </p>
+                    </div>
                 </div>
 
                 <div className="p-6 space-y-5">
@@ -94,7 +102,7 @@ export default function LoginPage({
 
                     <div className="border-t border-slate-800 pt-4 text-center">
                         <p className="text-xs text-slate-400">
-                            New to BookMyShow?{' '}
+                            New to CinePulse?{' '}
                             <button
                                 type="button"
                                 onClick={onGoToSignup}

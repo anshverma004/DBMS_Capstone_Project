@@ -19,12 +19,12 @@ export default function Navbar({
                     onClick={() => setCurrentPage('landing')}
                     className="cursor-pointer flex items-center gap-2.5"
                 >
-                    <div className="w-9 h-9 rounded-xl bg-rose-600 flex items-center justify-center text-white font-black text-base shadow-md shadow-rose-600/30">
-                        B
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-rose-600 to-rose-500 flex items-center justify-center text-white font-black text-sm shadow-md shadow-rose-600/30 tracking-tighter">
+                        CP
                     </div>
                     <div>
                         <h2 className="text-lg font-extrabold text-white tracking-tight">
-                            BookMy<span className="text-rose-500">Show</span>
+                            Cine<span className="text-rose-500">Pulse</span>
                         </h2>
                         <p className="text-[11px] text-slate-400">
                             Flash-Sale &amp; Movie Seat Reservation System

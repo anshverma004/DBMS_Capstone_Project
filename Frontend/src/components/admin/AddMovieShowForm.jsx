@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
+import { POSTER_PRESETS } from '../../constants/theaterData';
 
 export default function AddMovieShowForm({ onCreateMovieShow }) {
     const [title, setTitle] = useState('');
     const [genre, setGenre] = useState('Action / Sci-Fi');
     const [durationMins, setDurationMins] = useState(165);
     const [screenId, setScreenId] = useState(1);
+    const [posterUrl, setPosterUrl] = useState(POSTER_PRESETS[3].url);
     const [creating, setCreating] = useState(false);
 
     async function handleCreateSubmit(e) {
@@ -17,6 +19,7 @@ export default function AddMovieShowForm({ onCreateMovieShow }) {
                 genre,
                 durationMins: Number(durationMins),
                 screenId: Number(screenId),
+                posterUrl: posterUrl.trim() || POSTER_PRESETS[0].url,
                 isFlashSale: true
             });
             setTitle('');
@@ -26,84 +29,128 @@ export default function AddMovieShowForm({ onCreateMovieShow }) {
     }
 
     return (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-5">
             <div>
                 <h2 className="text-base font-bold text-white">
                     ➕ Add New Movie &amp; Schedule Auditorium Show
                 </h2>
                 <p className="text-xs text-slate-400">
-                    Creates the movie &amp; showtime in MySQL and automatically generates all
-                    50–60 theater seats.
+                    Creates the movie &amp; showtime in MySQL, assigns your selected poster, and
+                    generates all 50–60 theater seats.
                 </p>
             </div>
 
-            <form
-                onSubmit={handleCreateSubmit}
-                className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end"
-            >
-                <div className="md:col-span-4">
-                    <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                        Movie Title
-                    </label>
-                    <input
-                        type="text"
-                        required
-                        placeholder="e.g. Pushpa 2: The Rule (IMAX Premiere)"
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-rose-500"
-                    />
+            <form onSubmit={handleCreateSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                    <div className="md:col-span-4">
+                        <label className="block text-[11px] font-medium text-slate-400 mb-1">
+                            Movie Title
+                        </label>
+                        <input
+                            type="text"
+                            required
+                            placeholder="e.g. Pushpa 2: The Rule (IMAX Premiere)"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-rose-500"
+                        />
+                    </div>
+
+                    <div className="md:col-span-2">
+                        <label className="block text-[11px] font-medium text-slate-400 mb-1">
+                            Genre
+                        </label>
+                        <input
+                            type="text"
+                            required
+                            value={genre}
+                            onChange={(e) => setGenre(e.target.value)}
+                            className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-rose-500"
+                        />
+                    </div>
+
+                    <div className="md:col-span-1">
+                        <label className="block text-[11px] font-medium text-slate-400 mb-1">
+                            Mins
+                        </label>
+                        <input
+                            type="number"
+                            min="45"
+                            max="300"
+                            value={durationMins}
+                            onChange={(e) => setDurationMins(e.target.value)}
+                            className="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white focus:outline-none focus:border-rose-500"
+                        />
+                    </div>
+
+                    <div className="md:col-span-3">
+                        <label className="block text-[11px] font-medium text-slate-400 mb-1">
+                            Auditorium Screen
+                        </label>
+                        <select
+                            value={screenId}
+                            onChange={(e) => setScreenId(Number(e.target.value))}
+                            className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-rose-500"
+                        >
+                            <option value={1}>Screen 1 - IMAX Laser (60 Seats)</option>
+                            <option value={2}>Screen 2 - Dolby Atmos (50 Seats)</option>
+                        </select>
+                    </div>
+
+                    <div className="md:col-span-2">
+                        <button
+                            type="submit"
+                            disabled={creating}
+                            className="w-full py-2.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold rounded-xl shadow-lg shadow-emerald-600/30 transition cursor-pointer"
+                        >
+                            {creating ? 'Adding...' : '➕ Add Show'}
+                        </button>
+                    </div>
                 </div>
 
-                <div className="md:col-span-2">
-                    <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                        Genre
-                    </label>
-                    <input
-                        type="text"
-                        required
-                        value={genre}
-                        onChange={(e) => setGenre(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-rose-500"
-                    />
-                </div>
+                <div className="pt-2 border-t border-slate-800/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="space-y-2">
+                        <span className="block text-[11px] font-medium text-slate-400">
+                            Select Movie Poster Preset:
+                        </span>
+                        <div className="flex flex-wrap items-center gap-2.5">
+                            {POSTER_PRESETS.map((preset) => {
+                                const active = posterUrl === preset.url;
+                                return (
+                                    <button
+                                        key={preset.id}
+                                        type="button"
+                                        onClick={() => setPosterUrl(preset.url)}
+                                        title={preset.label}
+                                        className={`group rounded-xl overflow-hidden border-2 transition cursor-pointer ${
+                                            active
+                                                ? 'border-rose-500 ring-2 ring-rose-500/40 scale-105'
+                                                : 'border-slate-800 hover:border-slate-600 opacity-75 hover:opacity-100'
+                                        }`}
+                                    >
+                                        <img
+                                            src={preset.url}
+                                            alt={preset.label}
+                                            className="w-11 h-16 object-cover"
+                                        />
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
 
-                <div className="md:col-span-1">
-                    <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                        Mins
-                    </label>
-                    <input
-                        type="number"
-                        min="45"
-                        max="300"
-                        value={durationMins}
-                        onChange={(e) => setDurationMins(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white focus:outline-none focus:border-rose-500"
-                    />
-                </div>
-
-                <div className="md:col-span-3">
-                    <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                        Auditorium Screen
-                    </label>
-                    <select
-                        value={screenId}
-                        onChange={(e) => setScreenId(Number(e.target.value))}
-                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-rose-500"
-                    >
-                        <option value={1}>Screen 1 - IMAX Laser (60 Seats)</option>
-                        <option value={2}>Screen 2 - Dolby Atmos (50 Seats)</option>
-                    </select>
-                </div>
-
-                <div className="md:col-span-2">
-                    <button
-                        type="submit"
-                        disabled={creating}
-                        className="w-full py-2.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold rounded-xl shadow-lg shadow-emerald-600/30 transition cursor-pointer"
-                    >
-                        {creating ? 'Adding...' : '➕ Add Show'}
-                    </button>
+                    <div className="flex-1 max-w-md">
+                        <label className="block text-[11px] font-medium text-slate-400 mb-1">
+                            Or Custom Poster Image URL:
+                        </label>
+                        <input
+                            type="text"
+                            value={posterUrl}
+                            onChange={(e) => setPosterUrl(e.target.value)}
+                            placeholder="/images/poster-neon-action.jpg or https://..."
+                            className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-rose-500"
+                        />
+                    </div>
                 </div>
             </form>
         </div>

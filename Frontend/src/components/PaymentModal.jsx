@@ -51,14 +51,23 @@ export default function PaymentModal({
             <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full overflow-hidden shadow-2xl">
                 
                 <div className="px-6 py-4 bg-gradient-to-r from-emerald-600 to-teal-700 flex items-center justify-between">
-                    <div>
-                        <h3 className="text-base font-extrabold text-white">
-                            Complete Your Ticket Payment
-                        </h3>
-                        <p className="text-xs text-emerald-100">
-                            Order #BMS-{1000 + Number(booking.booking_id)} • Locked via{' '}
-                            {booking.lock_mode}
-                        </p>
+                    <div className="flex items-center gap-3">
+                        {currentShow?.posterUrl && (
+                            <img
+                                src={currentShow.posterUrl}
+                                alt={currentShow.movie_title}
+                                className="w-10 h-14 rounded-lg object-cover border border-white/25 shadow shrink-0"
+                            />
+                        )}
+                        <div>
+                            <h3 className="text-base font-extrabold text-white">
+                                Complete Your Ticket Payment
+                            </h3>
+                            <p className="text-xs text-emerald-100">
+                                Order #CP-{1000 + Number(booking.booking_id)} • Locked via{' '}
+                                {booking.lock_mode}
+                            </p>
+                        </div>
                     </div>
                     <button
                         onClick={onClose}

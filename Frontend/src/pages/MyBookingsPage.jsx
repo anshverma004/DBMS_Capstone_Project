@@ -21,7 +21,7 @@ export default function MyBookingsPage({
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-wrap items-center justify-between gap-4 shadow-xl">
                 <div>
                     <span className="text-xs font-bold uppercase tracking-wider text-rose-400">
-                        BookMyShow E-Tickets &amp; Checkout History
+                        CinePulse E-Tickets &amp; Checkout History
                     </span>
                     <h1 className="text-2xl font-extrabold text-white mt-0.5">
                         🎟️ My Bookings &amp; M-Tickets
@@ -64,7 +64,7 @@ export default function MyBookingsPage({
                     </h3>
                     <p className="text-xs text-slate-400 max-w-md mx-auto">
                         Select a theater and hold or confirm your favorite seats to generate your
-                        BookMyShow M-Ticket here.
+                        CinePulse M-Ticket here.
                     </p>
                     <button
                         onClick={onBackToTheaters}
@@ -91,63 +91,78 @@ export default function MyBookingsPage({
                                 }`}
                             >
                                 <div className="flex items-start justify-between gap-4">
-                                    <div className="space-y-2">
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <span
-                                                className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase ${
-                                                    isConfirmed
-                                                        ? 'bg-emerald-500 text-slate-950'
+                                    <div className="flex items-start gap-3.5">
+                                        {currentShow?.posterUrl && (
+                                            <img
+                                                src={currentShow.posterUrl}
+                                                alt={currentShow.movie_title}
+                                                onError={(e) => {
+                                                    e.currentTarget.src =
+                                                        '/images/poster-cosmic-wars.jpg';
+                                                }}
+                                                className="w-16 h-24 rounded-xl object-cover border border-slate-700 shadow-md shrink-0"
+                                            />
+                                        )}
+
+                                        <div className="space-y-2">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <span
+                                                    className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase ${
+                                                        isConfirmed
+                                                            ? 'bg-emerald-500 text-slate-950'
+                                                            : isPending
+                                                            ? 'bg-amber-400 text-slate-950'
+                                                            : 'bg-slate-800 text-slate-400'
+                                                    }`}
+                                                >
+                                                    {isConfirmed
+                                                        ? '✅ CONFIRMED M-TICKET'
                                                         : isPending
-                                                        ? 'bg-amber-400 text-slate-950'
-                                                        : 'bg-slate-800 text-slate-400'
-                                                }`}
-                                            >
-                                                {isConfirmed
-                                                    ? '✅ CONFIRMED M-TICKET'
-                                                    : isPending
-                                                    ? `⏳ PENDING HOLD (${b.seconds_left}s)`
-                                                    : b.booking_status}
-                                            </span>
-                                            <span className="text-xs font-mono text-slate-400">
-                                                #BMS-{1000 + Number(b.booking_id)}
-                                            </span>
-                                            <span className="text-[10px] font-mono bg-slate-800 text-indigo-300 px-2 py-0.5 rounded border border-slate-700">
-                                                {b.lock_mode}
-                                            </span>
-                                        </div>
-
-                                        <h3 className="text-lg font-extrabold text-white">
-                                            {currentShow?.movie_title || 'Cinema Premiere'}
-                                        </h3>
-
-                                        <p className="text-xs text-slate-300">
-                                            📍 {currentShow?.theaterName} ({currentShow?.screen_name})
-                                        </p>
-
-                                        <div className="pt-1 flex flex-wrap items-center gap-4 text-xs">
-                                            <div>
-                                                <span className="text-slate-400 block text-[10px] uppercase">
-                                                    Seats
+                                                        ? `⏳ PENDING HOLD (${b.seconds_left}s)`
+                                                        : b.booking_status}
                                                 </span>
-                                                <span className="font-extrabold text-rose-400 text-sm">
-                                                    {b.seats_list}
+                                                <span className="text-xs font-mono text-slate-400">
+                                                    #CP-{1000 + Number(b.booking_id)}
+                                                </span>
+                                                <span className="text-[10px] font-mono bg-slate-800 text-indigo-300 px-2 py-0.5 rounded border border-slate-700">
+                                                    {b.lock_mode}
                                                 </span>
                                             </div>
-                                            <div>
-                                                <span className="text-slate-400 block text-[10px] uppercase">
-                                                    Total Paid
-                                                </span>
-                                                <span className="font-extrabold text-emerald-400 text-sm">
-                                                    ₹{b.total_amount}
-                                                </span>
-                                            </div>
-                                            <div>
-                                                <span className="text-slate-400 block text-[10px] uppercase">
-                                                    Customer
-                                                </span>
-                                                <span className="font-semibold text-white">
-                                                    {b.user_name}
-                                                </span>
+
+                                            <h3 className="text-lg font-extrabold text-white">
+                                                {currentShow?.movie_title || 'Cinema Premiere'}
+                                            </h3>
+
+                                            <p className="text-xs text-slate-300">
+                                                📍 {currentShow?.theaterName} (
+                                                {currentShow?.screen_name})
+                                            </p>
+
+                                            <div className="pt-1 flex flex-wrap items-center gap-4 text-xs">
+                                                <div>
+                                                    <span className="text-slate-400 block text-[10px] uppercase">
+                                                        Seats
+                                                    </span>
+                                                    <span className="font-extrabold text-rose-400 text-sm">
+                                                        {b.seats_list}
+                                                    </span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-slate-400 block text-[10px] uppercase">
+                                                        Total Paid
+                                                    </span>
+                                                    <span className="font-extrabold text-emerald-400 text-sm">
+                                                        ₹{b.total_amount}
+                                                    </span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-slate-400 block text-[10px] uppercase">
+                                                        Customer
+                                                    </span>
+                                                    <span className="font-semibold text-white">
+                                                        {b.user_name}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -157,7 +172,7 @@ export default function MyBookingsPage({
                                             type="button"
                                             onClick={() => setInspectedTicket(b)}
                                             title="Click to verify M-Ticket in MySQL InnoDB"
-                                            className="bg-white hover:bg-emerald-100 text-slate-950 p-3 rounded-xl text-center font-mono text-xs font-black leading-none select-none shadow-md transition cursor-pointer"
+                                            className="bg-white hover:bg-emerald-100 text-slate-950 p-3 rounded-xl text-center font-mono text-xs font-black leading-none select-none shadow-md transition cursor-pointer shrink-0"
                                         >
                                             ▄▄▄▄▄▄▄
                                             <br />

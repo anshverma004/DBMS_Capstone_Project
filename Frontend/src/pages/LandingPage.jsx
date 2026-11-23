@@ -8,21 +8,27 @@ export default function LandingPage({
 }) {
     return (
         <div className="space-y-12 py-8">
-            
-            <div className="relative overflow-hidden rounded-3xl border border-rose-500/30 bg-gradient-to-br from-rose-950 via-slate-900 to-indigo-950 p-8 md:p-14 shadow-2xl text-center">
-                <div className="max-w-3xl mx-auto space-y-6">
-                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs font-bold uppercase tracking-wider">
+            <div className="relative overflow-hidden rounded-3xl border border-rose-500/30 shadow-2xl">
+                <img
+                    src="/images/hero-cinema.jpg"
+                    alt="CinePulse Luxury IMAX Auditorium"
+                    className="absolute inset-0 w-full h-full object-cover object-center"
+                />
+                <div className="absolute inset-0 bg-gradient-to-br from-slate-950/92 via-slate-950/80 to-rose-950/75" />
+
+                <div className="relative z-10 max-w-3xl mx-auto p-8 md:p-16 space-y-6 text-center">
+                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs font-bold uppercase tracking-wider backdrop-blur-sm">
                         ⚡ High-Concurrency Flash-Sale &amp; Movie Seat Reservation Platform
                     </div>
 
-                    <h1 className="text-3xl md:text-5xl font-extrabold text-white leading-tight tracking-tight">
-                        Welcome to BookMy<span className="text-rose-500">Show</span>
+                    <h1 className="text-3xl md:text-5xl font-extrabold text-white leading-tight tracking-tight drop-shadow-lg">
+                        Welcome to Cine<span className="text-rose-500">Pulse</span>
                     </h1>
 
-                    <p className="text-sm md:text-base text-slate-300 leading-relaxed max-w-2xl mx-auto">
-                        Your one-stop destination for flash-sale movie drops and real-time cinema
-                        seat reservations. Sign up or log in to search theaters in your city and
-                        book your seats.
+                    <p className="text-sm md:text-base text-slate-200 leading-relaxed max-w-2xl mx-auto">
+                        Your premier destination for flash-sale movie drops and real-time luxury
+                        cinema seat reservations. Sign up or log in to search theaters in your city
+                        and reserve your seats.
                     </p>
 
                     <div className="flex flex-wrap items-center justify-center gap-4 pt-3">
@@ -36,7 +42,7 @@ export default function LandingPage({
                                 </button>
                                 <button
                                     onClick={onGoToLogin}
-                                    className="px-7 py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm border border-slate-700 transition cursor-pointer"
+                                    className="px-7 py-3.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-white font-bold text-sm border border-slate-700 transition cursor-pointer backdrop-blur-sm"
                                 >
                                     Already Have an Account? Log In →
                                 </button>
@@ -53,43 +59,72 @@ export default function LandingPage({
                 </div>
             </div>
 
-            
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-2.5 text-center">
-                    <div className="w-11 h-11 mx-auto rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-400 flex items-center justify-center font-extrabold text-sm">
-                        01
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl group">
+                    <div className="relative h-36 overflow-hidden">
+                        <img
+                            src="/images/theater-imax-hall.jpg"
+                            alt="Luxury Cinema Lobby"
+                            className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/30 to-transparent" />
+                        <div className="absolute bottom-3 left-4 w-9 h-9 rounded-xl bg-rose-600 text-white flex items-center justify-center font-extrabold text-xs shadow-lg">
+                            01
+                        </div>
                     </div>
-                    <h3 className="text-base font-bold text-white">1. Sign Up &amp; Log In</h3>
-                    <p className="text-xs text-slate-400 leading-relaxed">
-                        Create your account and sign in to unlock theater search and live movie
-                        showtimes across cities.
-                    </p>
+                    <div className="p-6 pt-3 space-y-2">
+                        <h3 className="text-base font-bold text-white">1. Sign Up &amp; Log In</h3>
+                        <p className="text-xs text-slate-400 leading-relaxed">
+                            Create your CinePulse account and sign in to unlock theater search and
+                            live premiere showtimes across cities.
+                        </p>
+                    </div>
                 </div>
 
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-2.5 text-center">
-                    <div className="w-11 h-11 mx-auto rounded-xl bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 flex items-center justify-center font-extrabold text-sm">
-                        02
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl group">
+                    <div className="relative h-36 overflow-hidden">
+                        <img
+                            src="/images/theater-dolby-lounge.jpg"
+                            alt="Dolby Atmos Theater Lounge"
+                            className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/30 to-transparent" />
+                        <div className="absolute bottom-3 left-4 w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-extrabold text-xs shadow-lg">
+                            02
+                        </div>
                     </div>
-                    <h3 className="text-base font-bold text-white">
-                        2. Search Theaters in Your City
-                    </h3>
-                    <p className="text-xs text-slate-400 leading-relaxed">
-                        After logging in, browse theaters by city and mall location to find your
-                        preferred cinema hall.
-                    </p>
+                    <div className="p-6 pt-3 space-y-2">
+                        <h3 className="text-base font-bold text-white">
+                            2. Search Theaters in Your City
+                        </h3>
+                        <p className="text-xs text-slate-400 leading-relaxed">
+                            After logging in, browse multiplexes by city and mall location to find
+                            your preferred cinema hall.
+                        </p>
+                    </div>
                 </div>
 
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-2.5 text-center">
-                    <div className="w-11 h-11 mx-auto rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center font-extrabold text-sm">
-                        03
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl group">
+                    <div className="relative h-36 overflow-hidden">
+                        <img
+                            src="/images/hero-cinema.jpg"
+                            alt="IMAX Auditorium Seating"
+                            className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/30 to-transparent" />
+                        <div className="absolute bottom-3 left-4 w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-extrabold text-xs shadow-lg">
+                            03
+                        </div>
                     </div>
-                    <h3 className="text-base font-bold text-white">
-                        3. Select Seats &amp; Confirm Booking
-                    </h3>
-                    <p className="text-xs text-slate-400 leading-relaxed">
-                        Click on a theater to view its live seat layout, hold seats for 5 minutes,
-                        and confirm your ticket.
-                    </p>
+                    <div className="p-6 pt-3 space-y-2">
+                        <h3 className="text-base font-bold text-white">
+                            3. Select Seats &amp; Confirm Booking
+                        </h3>
+                        <p className="text-xs text-slate-400 leading-relaxed">
+                            Click on a theater to view its live seat layout, hold seats for 5
+                            minutes, and download your QR E-Ticket PDF.
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>

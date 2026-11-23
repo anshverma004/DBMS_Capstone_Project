@@ -24,21 +24,32 @@ export default function BookingPage({
 }) {
     return (
         <div className="space-y-6">
-            
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl px-5 py-3.5 flex flex-wrap items-center justify-between gap-4">
-                <div>
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-rose-400">
-                        Step 2 of 2 • Auditorium Seat Selection &amp; Reservation
-                    </span>
-                    <h2 className="text-base font-extrabold text-white">
-                        📍 {currentShow?.theaterName} —{' '}
-                        <span className="text-indigo-300">{currentShow?.movie_title}</span>
-                        {selectedTimeSlot && (
-                            <span className="ml-2 text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
-                                🕒 {selectedTimeSlot}
-                            </span>
-                        )}
-                    </h2>
+            <div className="relative overflow-hidden bg-slate-900 border border-slate-800 rounded-2xl px-5 py-4 flex flex-wrap items-center justify-between gap-4 shadow-xl">
+                <div className="flex items-center gap-3.5">
+                    {currentShow?.posterUrl && (
+                        <img
+                            src={currentShow.posterUrl}
+                            alt={currentShow.movie_title}
+                            onError={(e) => {
+                                e.currentTarget.src = '/images/poster-cosmic-wars.jpg';
+                            }}
+                            className="w-12 h-16 rounded-lg object-cover border border-slate-700 shadow-md shrink-0"
+                        />
+                    )}
+                    <div>
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-rose-400">
+                            Step 2 of 2 • Auditorium Seat Selection &amp; Reservation
+                        </span>
+                        <h2 className="text-base font-extrabold text-white">
+                            📍 {currentShow?.theaterName} —{' '}
+                            <span className="text-indigo-300">{currentShow?.movie_title}</span>
+                            {selectedTimeSlot && (
+                                <span className="ml-2 text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
+                                    🕒 {selectedTimeSlot}
+                                </span>
+                            )}
+                        </h2>
+                    </div>
                 </div>
                 <div className="flex items-center gap-2">
                     <button

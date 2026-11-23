@@ -1,4 +1,4 @@
-function generateTicketQrSvg(seedText = 'BMS-1001') {
+function generateTicketQrSvg(seedText = 'CP-1001') {
     const size = 9;
     let hash = 2166136261;
     for (let i = 0; i < seedText.length; i++) {
@@ -27,16 +27,22 @@ function generateTicketQrSvg(seedText = 'BMS-1001') {
     </svg>`;
 }
 
+function resolveAbsoluteImageUrl(urlPath = '/images/poster-cosmic-wars.jpg') {
+    if (String(urlPath).startsWith('http')) return urlPath;
+    return `${window.location.origin}${urlPath}`;
+}
+
 function buildSingleTicketHtml(booking, currentShow, loggedInUser) {
-    const ticketNo = `BMS-${1000 + Number(booking.booking_id)}`;
+    const ticketNo = `CP-${1000 + Number(booking.booking_id)}`;
     const isConfirmed = booking.booking_status === 'CONFIRMED';
     const movieTitle = currentShow?.movie_title || 'Cinema Premiere';
     const theaterName = currentShow?.theaterName || 'PVR IMAX Multiplex';
     const mallAddress = currentShow?.mallAddress || 'Main Atrium, Level 3';
     const screenName = currentShow?.screen_name || 'Screen 1 - IMAX Laser';
     const formatTag = currentShow?.format || 'IMAX 3D • Dolby Atmos';
+    const posterSrc = resolveAbsoluteImageUrl(currentShow?.posterUrl);
     const customerName = booking.user_name || loggedInUser?.full_name || 'Cinema Guest';
-    const customerEmail = loggedInUser?.email || 'verified.customer@bookmyshow.com';
+    const customerEmail = loggedInUser?.email || 'tickets@cinepulse.in';
     const timestamp = booking.confirmed_at
         ? new Date(booking.confirmed_at).toLocaleString()
         : new Date().toLocaleString();
@@ -45,11 +51,14 @@ function buildSingleTicketHtml(booking, currentShow, loggedInUser) {
     return `
         <div class="ticket-wrapper">
             <div class="ticket-card">
-                
+                <div class="ticket-poster-col">
+                    <img class="ticket-poster" src="${posterSrc}" alt="${movieTitle}" />
+                </div>
+
                 <div class="ticket-main">
                     <div class="brand-row">
                         <div>
-                            <span class="brand-badge">BOOKMYSHOW</span>
+                            <span class="brand-badge">CINEPULSE</span>
                             <span class="status-pill ${isConfirmed ? 'status-confirmed' : 'status-pending'}">
                                 ${isConfirmed ? '✓ CONFIRMED E-TICKET' : '⏳ PENDING HOLD'}
                             </span>
@@ -86,7 +95,7 @@ function buildSingleTicketHtml(booking, currentShow, loggedInUser) {
 
                     <div class="receipt-row">
                         <div>
-                            <span class="receipt-label">ACID Concurrency Mode:</span>
+                            <span class="receipt-label">ACID Lock Mode:</span>
                             <strong class="receipt-mode">${booking.lock_mode || 'PESSIMISTIC'}</strong>
                             <span class="receipt-email">• ${customerEmail}</span>
                         </div>
@@ -97,14 +106,12 @@ function buildSingleTicketHtml(booking, currentShow, loggedInUser) {
                     </div>
                 </div>
 
-                
                 <div class="ticket-divider">
                     <div class="notch-top"></div>
                     <div class="dashed-line"></div>
                     <div class="notch-bottom"></div>
                 </div>
 
-                
                 <div class="ticket-stub">
                     <div class="stub-tag">GATE ENTRY QR</div>
                     <div class="qr-box">${qrSvg}</div>
@@ -121,7 +128,7 @@ export function openPrintableTicketPdf(bookingsList, currentShow, loggedInUser) 
     const items = Array.isArray(bookingsList) ? bookingsList : [bookingsList];
     if (items.length === 0) return;
 
-    const printWin = window.open('', '_blank', 'width=980,height=820');
+    const printWin = window.open('', '_blank', 'width=1020,height=820');
     if (!printWin) {
         window.print();
         return;
@@ -135,7 +142,7 @@ export function openPrintableTicketPdf(bookingsList, currentShow, loggedInUser) 
 <html>
 <head>
     <meta charset="utf-8" />
-    <title>BookMyShow Official E-Ticket PDF — ${currentShow?.movie_title || 'Cinema'}</title>
+    <title>CinePulse Official E-Ticket PDF — ${currentShow?.movie_title || 'Cinema'}</title>
     <style>
         * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
         body {
@@ -146,7 +153,7 @@ export function openPrintableTicketPdf(bookingsList, currentShow, loggedInUser) 
             color: #0f172a;
         }
         .toolbar {
-            max-width: 860px;
+            max-width: 920px;
             margin: 0 auto 22px auto;
             background: #0f172a;
             color: #ffffff;
@@ -179,7 +186,7 @@ export function openPrintableTicketPdf(bookingsList, currentShow, loggedInUser) 
             margin-left: 8px;
         }
         .sheet-header {
-            max-width: 860px;
+            max-width: 920px;
             margin: 0 auto 18px auto;
             display: flex;
             align-items: center;
@@ -188,7 +195,7 @@ export function openPrintableTicketPdf(bookingsList, currentShow, loggedInUser) 
             padding-bottom: 12px;
         }
         .ticket-wrapper {
-            max-width: 860px;
+            max-width: 920px;
             margin: 0 auto 24px auto;
             page-break-inside: avoid;
         }
@@ -200,9 +207,20 @@ export function openPrintableTicketPdf(bookingsList, currentShow, loggedInUser) 
             overflow: hidden;
             box-shadow: 0 12px 30px rgba(15,23,42,0.08);
         }
+        .ticket-poster-col {
+            width: 145px;
+            background: #0f172a;
+            flex-shrink: 0;
+        }
+        .ticket-poster {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
         .ticket-main {
             flex: 1;
-            padding: 22px 26px;
+            padding: 20px 24px;
         }
         .brand-row {
             display: flex;
@@ -236,36 +254,36 @@ export function openPrintableTicketPdf(bookingsList, currentShow, loggedInUser) 
         }
         .movie-title {
             margin: 4px 0;
-            font-size: 22px;
+            font-size: 20px;
             font-weight: 900;
             color: #0f172a;
         }
         .movie-meta {
-            font-size: 12px;
+            font-size: 11.5px;
             font-weight: 600;
             color: #64748b;
-            margin-bottom: 14px;
+            margin-bottom: 12px;
         }
         .venue-box {
             background: #f8fafc;
             border: 1px solid #e2e8f0;
             border-radius: 10px;
-            padding: 10px 14px;
-            margin-bottom: 14px;
+            padding: 9px 12px;
+            margin-bottom: 12px;
         }
-        .venue-name { font-size: 13px; font-weight: 800; color: #1e293b; }
+        .venue-name { font-size: 12.5px; font-weight: 800; color: #1e293b; }
         .venue-address { font-size: 11px; color: #64748b; margin-top: 2px; }
         .info-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
-            margin-bottom: 16px;
+            gap: 8px;
+            margin-bottom: 14px;
         }
         .info-cell {
             background: #f8fafc;
             border: 1px solid #e2e8f0;
             border-radius: 10px;
-            padding: 8px 10px;
+            padding: 7px 9px;
         }
         .info-label {
             display: block;
@@ -276,18 +294,18 @@ export function openPrintableTicketPdf(bookingsList, currentShow, loggedInUser) 
         }
         .info-value {
             display: block;
-            font-size: 12px;
+            font-size: 11.5px;
             font-weight: 800;
             color: #0f172a;
             margin-top: 3px;
         }
-        .seat-highlight { color: #e11d48; font-size: 14px; }
+        .seat-highlight { color: #e11d48; font-size: 13.5px; }
         .receipt-row {
             display: flex;
             align-items: center;
             justify-content: space-between;
             border-top: 1px dashed #cbd5e1;
-            padding-top: 12px;
+            padding-top: 10px;
             font-size: 11px;
             color: #475569;
         }
@@ -332,9 +350,9 @@ export function openPrintableTicketPdf(bookingsList, currentShow, loggedInUser) 
         .notch-top { top: -12px; }
         .notch-bottom { bottom: -12px; }
         .ticket-stub {
-            width: 220px;
+            width: 205px;
             background: #f8fafc;
-            padding: 18px 16px;
+            padding: 18px 14px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -369,7 +387,7 @@ export function openPrintableTicketPdf(bookingsList, currentShow, loggedInUser) 
             margin-top: 8px;
         }
         .footer-note {
-            max-width: 860px;
+            max-width: 920px;
             margin: 12px auto 0 auto;
             font-size: 11px;
             color: #64748b;
@@ -385,7 +403,7 @@ export function openPrintableTicketPdf(bookingsList, currentShow, loggedInUser) 
 <body>
     <div class="toolbar">
         <div>
-            <strong style="font-size:14px;">🎟️ BookMyShow Official E-Ticket PDF Preview</strong>
+            <strong style="font-size:14px;">🎟️ CinePulse Official E-Ticket PDF Preview</strong>
             <div style="font-size:11px;color:#94a3b8;margin-top:2px;">
                 Choose "Save as PDF" in the destination dropdown to download your ticket PDF.
             </div>
@@ -398,7 +416,7 @@ export function openPrintableTicketPdf(bookingsList, currentShow, loggedInUser) 
 
     <div class="sheet-header">
         <div>
-            <strong style="font-size:16px;color:#0f172a;">BOOKMYSHOW CINEMA • M-TICKET &amp; TAX RECEIPT</strong>
+            <strong style="font-size:16px;color:#0f172a;">CINEPULSE CINEMA • M-TICKET &amp; TAX RECEIPT</strong>
             <div style="font-size:11px;color:#64748b;">Verified by MySQL 8.0 InnoDB ACID Transaction Engine</div>
         </div>
         <div style="font-size:11px;color:#475569;font-family:monospace;">
@@ -414,7 +432,7 @@ export function openPrintableTicketPdf(bookingsList, currentShow, loggedInUser) 
 
     <script>
         window.onload = function() {
-            setTimeout(function() { window.print(); }, 350);
+            setTimeout(function() { window.print(); }, 450);
         };
     </script>
 </body>

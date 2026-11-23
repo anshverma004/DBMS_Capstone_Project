@@ -24,13 +24,21 @@ export default function SignupPage({ onSignupSubmit, onGoToLogin }) {
     return (
         <div className="max-w-md mx-auto py-10">
             <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
-                <div className="px-6 py-5 bg-gradient-to-r from-rose-600 to-indigo-700">
-                    <h2 className="text-lg font-extrabold text-white">
-                        Create Your BookMyShow Account
-                    </h2>
-                    <p className="text-xs text-rose-100 mt-0.5">
-                        Sign up to search theaters in your city and reserve movie seats
-                    </p>
+                <div className="relative h-28 overflow-hidden">
+                    <img
+                        src="/images/theater-imax-hall.jpg"
+                        alt="CinePulse Multiplex"
+                        className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-rose-950/60" />
+                    <div className="absolute inset-x-6 bottom-4">
+                        <h2 className="text-lg font-extrabold text-white">
+                            Create Your Cine<span className="text-rose-400">Pulse</span> Account
+                        </h2>
+                        <p className="text-xs text-slate-200 mt-0.5">
+                            Sign up to search theaters in your city and reserve movie seats
+                        </p>
+                    </div>
                 </div>
 
                 <div className="p-6 space-y-5">

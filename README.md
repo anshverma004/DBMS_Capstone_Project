@@ -7,7 +7,7 @@
 > **B.Tech CSE (AI & ML) — 3rd Semester DBMS Capstone Project**  
 > **K.R. Mangalam University** • **Author:** Ansh Verma
 
-A full-stack **Movie Flash-Sale & Seat Reservation System** (inspired by **BookMyShow**) built with **MySQL 8.0 (`InnoDB`)**, **Node.js + Express (MVC)**, **Socket.io**, and **React + Tailwind CSS** to prevent double-bookings, deadlocks, and abandoned-cart seat lockups during high-traffic ticket sales.
+A full-stack **Movie Flash-Sale & Seat Reservation System** (**CinePulse**) built with **MySQL 8.0 (`InnoDB`)**, **Node.js + Express (MVC)**, **Socket.io**, and **React + Tailwind CSS** to prevent double-bookings, deadlocks, and abandoned-cart seat lockups during high-traffic ticket sales.
 
 ---
 
@@ -32,7 +32,7 @@ A full-stack **Movie Flash-Sale & Seat Reservation System** (inspired by **BookM
 ### 2. Customer Ticketing Experience
 * **City & Theater Search:** Filter multiplexes by City (*Gurugram*, *New Delhi*, *Mumbai*), Mall/Movie search, Date tabs, and Showtime slots.
 * **Interactive 3-Tier Auditorium:** Smart group presets (*Couple Recliner*, *Family 4-Pack*, *Budget Pair*), *View-From-Seat* acoustic preview, *Watch Held Seat* auto-picker, and *Version Contention Heatmap*.
-* **Perforated Boarding-Pass E-Ticket PDF:** Print or save official BookMyShow-style PDF tickets with custom SVG QR code, barcode stub,Gate QR DB Verifier, and 1-click ticket refund.
+* **Perforated Boarding-Pass E-Ticket PDF:** Print or save official CinePulse PDF tickets with movie poster, custom SVG QR code, barcode stub, Gate QR DB Verifier, and 1-click ticket refund.
 
 ### 3. Owner-Only Admin & Telemetry (`Ansh` Only)
 * **Role-Based Access Control:** Admin & Analytics options are strictly hidden from regular customers and accessible only to the Owner (`Ansh`).

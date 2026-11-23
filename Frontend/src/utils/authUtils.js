@@ -1,5 +1,5 @@
-export const SESSION_USER_KEY = 'bms_active_user';
-export const SESSION_PAGE_KEY = 'bms_active_page';
+export const SESSION_USER_KEY = 'cinepulse_active_user';
+export const SESSION_PAGE_KEY = 'cinepulse_active_page';
 
 export function checkIsOwnerAdmin(user) {
     if (!user) return false;

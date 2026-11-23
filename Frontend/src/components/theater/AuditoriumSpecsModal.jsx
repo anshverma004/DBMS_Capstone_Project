@@ -10,21 +10,36 @@ export default function AuditoriumSpecsModal({
     return (
         <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl">
-                <div className="px-6 py-4 bg-gradient-to-r from-rose-600 to-indigo-700 flex items-center justify-between">
-                    <div>
-                        <h3 className="text-base font-extrabold text-white">
-                            {specsModalShow.theaterName}
-                        </h3>
-                        <p className="text-xs text-rose-100">
-                            {specsModalShow.screen_name} • {specsModalShow.format}
-                        </p>
-                    </div>
+                <div className="relative h-40 overflow-hidden">
+                    <img
+                        src={specsModalShow.venuePhotoUrl || '/images/theater-imax-hall.jpg'}
+                        alt={specsModalShow.theaterName}
+                        className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/65 to-black/30" />
+
                     <button
                         onClick={onClose}
-                        className="text-white/80 hover:text-white bg-black/20 px-2.5 py-1 rounded-lg cursor-pointer"
+                        className="absolute top-3.5 right-3.5 text-white/90 hover:text-white bg-black/50 px-2.5 py-1 rounded-lg cursor-pointer backdrop-blur-sm"
                     >
                         ✕
                     </button>
+
+                    <div className="absolute bottom-3.5 inset-x-5 flex items-end gap-3">
+                        <img
+                            src={specsModalShow.posterUrl}
+                            alt={specsModalShow.movie_title}
+                            className="w-14 h-20 rounded-lg object-cover border border-white/20 shadow-lg shrink-0"
+                        />
+                        <div>
+                            <h3 className="text-base font-extrabold text-white leading-tight">
+                                {specsModalShow.theaterName}
+                            </h3>
+                            <p className="text-xs text-rose-200 mt-0.5">
+                                {specsModalShow.screen_name} • {specsModalShow.format}
+                            </p>
+                        </div>
+                    </div>
                 </div>
 
                 <div className="p-6 space-y-4 text-xs">

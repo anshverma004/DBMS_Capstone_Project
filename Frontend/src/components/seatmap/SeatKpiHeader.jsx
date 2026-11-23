@@ -42,16 +42,25 @@ export default function SeatKpiHeader({
 
             
             <div className="flex flex-wrap items-center justify-between gap-4 pb-4 mb-4 border-b border-slate-800">
-                <div>
-                    <h3 className="text-base font-bold text-white flex items-center gap-2">
-                        🎬 {currentShow?.movie_title || 'Theater Auditorium'}
-                    </h3>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                        📍 {currentShow?.theaterName || currentShow?.screen_name} •{' '}
-                        <span className="text-indigo-400 font-semibold">
-                            {currentShow?.screen_name}
-                        </span>
-                    </p>
+                <div className="flex items-center gap-3">
+                    {currentShow?.venuePhotoUrl && (
+                        <img
+                            src={currentShow.venuePhotoUrl}
+                            alt={currentShow.screen_name}
+                            className="w-16 h-11 rounded-lg object-cover border border-slate-700 shrink-0"
+                        />
+                    )}
+                    <div>
+                        <h3 className="text-base font-bold text-white flex items-center gap-2">
+                            🎬 {currentShow?.movie_title || 'Theater Auditorium'}
+                        </h3>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                            📍 {currentShow?.theaterName || currentShow?.screen_name} •{' '}
+                            <span className="text-indigo-400 font-semibold">
+                                {currentShow?.screen_name}
+                            </span>
+                        </p>
+                    </div>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1.5">
