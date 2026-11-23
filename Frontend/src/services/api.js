@@ -4,6 +4,7 @@ export { fetchUsers, signupUserApi, loginUserApi } from './authService';
 export {
     fetchShows,
     fetchShowDetails,
+    searchTheatersApi,
     createMovieShowApi,
     deleteCustomShowApi,
     resetShowApi,

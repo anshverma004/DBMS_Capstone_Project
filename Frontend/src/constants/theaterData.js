@@ -36,8 +36,10 @@ export const POSTER_PRESETS = [
 
 export const VENUE_PHOTOS = [
     '/images/theater-imax-hall.jpg',
+    '/images/theater-screen-imax.jpg',
+    '/images/theater-dolby-lounge.jpg',
     '/images/hero-cinema.jpg',
-    '/images/theater-dolby-lounge.jpg'
+    '/images/theater-auditorium-rows.jpg'
 ];
 
 export const SHOW_ENRICHMENT = {
@@ -77,7 +79,7 @@ export const SHOW_ENRICHMENT = {
         votes: '312.5K Votes',
         showTimeLabel: '10:30 PM (10th Anniversary Special)',
         posterUrl: '/images/poster-deep-space.jpg',
-        venuePhotoUrl: '/images/hero-cinema.jpg',
+        venuePhotoUrl: '/images/theater-screen-imax.jpg',
         timeSlots: [
             { time: '12:00 PM', tag: '70MM IMAX', isFlash: false },
             { time: '04:15 PM', tag: 'IMAX LASER', isFlash: false },

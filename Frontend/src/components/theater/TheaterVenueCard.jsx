@@ -10,7 +10,9 @@ export default function TheaterVenueCard({
             <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
                 <div className="flex flex-col sm:flex-row items-start gap-4 flex-1">
                     <div
-                        onClick={() => onSelectTheaterShow(show.show_id, show.showTimeLabel)}
+                        onClick={() =>
+                            onSelectTheaterShow(show.show_id, show.showTimeLabel, show)
+                        }
                         className="w-24 sm:w-28 aspect-[2/3] rounded-xl overflow-hidden border border-slate-700/80 shadow-lg shrink-0 cursor-pointer group bg-slate-950"
                     >
                         <img
@@ -46,7 +48,9 @@ export default function TheaterVenueCard({
                         </div>
 
                         <h3
-                            onClick={() => onSelectTheaterShow(show.show_id, show.showTimeLabel)}
+                            onClick={() =>
+                                onSelectTheaterShow(show.show_id, show.showTimeLabel, show)
+                            }
                             className="text-lg font-extrabold text-white hover:text-rose-400 transition cursor-pointer"
                         >
                             {show.theaterName}
@@ -74,18 +78,18 @@ export default function TheaterVenueCard({
                 </div>
 
                 <div className="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden w-full lg:w-auto min-w-[330px]">
-                    <div className="relative h-20 overflow-hidden">
+                    <div className="relative h-24 overflow-hidden">
                         <img
                             src={show.venuePhotoUrl || '/images/theater-imax-hall.jpg'}
                             alt={show.screen_name}
                             className="w-full h-full object-cover"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/55 to-transparent" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/45 to-transparent" />
                         <div className="absolute bottom-2 inset-x-3 flex items-center justify-between text-xs">
-                            <span className="text-slate-200 font-bold uppercase text-[10px] tracking-wider">
+                            <span className="text-slate-100 font-bold uppercase text-[10px] tracking-wider drop-shadow">
                                 Select Showtime
                             </span>
-                            <span className="text-emerald-400 font-bold text-[11px] bg-slate-950/80 px-2 py-0.5 rounded-full">
+                            <span className="text-emerald-400 font-bold text-[11px] bg-slate-950/85 px-2 py-0.5 rounded-full">
                                 🟢 {show.available_seats}/{show.total_capacity} Free
                             </span>
                         </div>
@@ -99,7 +103,8 @@ export default function TheaterVenueCard({
                                 onClick={() =>
                                     onSelectTheaterShow(
                                         show.show_id,
-                                        `${slot.time} (${slot.tag})`
+                                        `${slot.time} (${slot.tag})`,
+                                        show
                                     )
                                 }
                                 className={`px-3 py-2 rounded-xl border text-center transition cursor-pointer ${

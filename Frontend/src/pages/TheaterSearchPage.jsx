@@ -1,8 +1,27 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { DATE_TABS, enrichShow } from '../constants/theaterData';
+import { searchTheatersApi } from '../services/api';
 import NowShowingStrip from '../components/theater/NowShowingStrip';
 import TheaterVenueCard from '../components/theater/TheaterVenueCard';
 import AuditoriumSpecsModal from '../components/theater/AuditoriumSpecsModal';
+
+const POPULAR_CITIES = [
+    { id: 'ALL', label: 'All Cities' },
+    { id: 'New Delhi', label: 'New Delhi' },
+    { id: 'Gurugram', label: 'Gurugram' },
+    { id: 'Noida', label: 'Noida' },
+    { id: 'Mumbai', label: 'Mumbai' },
+    { id: 'Bengaluru', label: 'Bengaluru' },
+    { id: 'Hyderabad', label: 'Hyderabad' },
+    { id: 'Pune', label: 'Pune' },
+    { id: 'Chennai', label: 'Chennai' },
+    { id: 'Kolkata', label: 'Kolkata' },
+    { id: 'Jaipur', label: 'Jaipur' },
+    { id: 'Chandigarh', label: 'Chandigarh' },
+    { id: 'Ahmedabad', label: 'Ahmedabad' },
+    { id: 'Kochi', label: 'Kochi' },
+    { id: 'Lucknow', label: 'Lucknow' }
+];
 
 export default function TheaterSearchPage({
     shows,
@@ -13,25 +32,66 @@ export default function TheaterSearchPage({
     onSelectTheaterShow
 }) {
     const [selectedDateTab, setSelectedDateTab] = useState('today');
+    const [cityInput, setCityInput] = useState(
+        selectedCity && selectedCity !== 'ALL' ? selectedCity : ''
+    );
+    const [apiTheaters, setApiTheaters] = useState([]);
+    const [searching, setSearching] = useState(false);
     const [specsModalShow, setSpecsModalShow] = useState(null);
-    const enrichedShows = shows.map((sh, idx) => enrichShow(sh, idx));
 
-    const filteredTheaters = enrichedShows.filter((sh) => {
-        const matchesCity =
-            selectedCity === 'ALL' ||
-            sh.city.toLowerCase().includes(selectedCity.toLowerCase());
+    const enrichedBaseShows = shows.map((sh, idx) => enrichShow(sh, idx));
 
-        const q = searchQuery.trim().toLowerCase();
-        const matchesSearch =
-            !q ||
-            sh.theaterName?.toLowerCase().includes(q) ||
-            sh.mallAddress?.toLowerCase().includes(q) ||
-            sh.city?.toLowerCase().includes(q) ||
-            sh.movie_title?.toLowerCase().includes(q) ||
-            sh.screen_name?.toLowerCase().includes(q);
+    useEffect(() => {
+        let cancelled = false;
+        const timer = setTimeout(async () => {
+            setSearching(true);
+            try {
+                const res = await searchTheatersApi({
+                    city: selectedCity,
+                    q: searchQuery
+                });
+                if (!cancelled && Array.isArray(res?.theaters)) {
+                    setApiTheaters(res.theaters.map((sh, idx) => enrichShow(sh, idx)));
+                }
+            } catch {
+                if (!cancelled) {
+                    const cNorm = String(selectedCity || '').toLowerCase();
+                    const qNorm = String(searchQuery || '').toLowerCase();
+                    const fallback = enrichedBaseShows.filter((sh) => {
+                        const matchCity =
+                            !cNorm ||
+                            cNorm === 'all' ||
+                            sh.city?.toLowerCase().includes(cNorm);
+                        const matchQ =
+                            !qNorm ||
+                            sh.theaterName?.toLowerCase().includes(qNorm) ||
+                            sh.movie_title?.toLowerCase().includes(qNorm) ||
+                            sh.city?.toLowerCase().includes(qNorm);
+                        return matchCity && matchQ;
+                    });
+                    setApiTheaters(fallback);
+                }
+            } finally {
+                if (!cancelled) setSearching(false);
+            }
+        }, 250);
 
-        return matchesCity && matchesSearch;
-    });
+        return () => {
+            cancelled = true;
+            clearTimeout(timer);
+        };
+    }, [selectedCity, searchQuery, shows]);
+
+    function handleCitySubmit(e) {
+        e.preventDefault();
+        const trimmed = cityInput.trim();
+        setSelectedCity(trimmed || 'ALL');
+    }
+
+    function handleCityChipClick(cityId) {
+        setCityInput(cityId === 'ALL' ? '' : cityId);
+        setSelectedCity(cityId);
+    }
 
     return (
         <div className="space-y-6 py-2">
@@ -39,14 +99,14 @@ export default function TheaterSearchPage({
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <div>
                         <span className="text-xs font-bold uppercase tracking-wider text-rose-400">
-                            Step 1 of 2 • Choose Your Cinema Venue &amp; Showtime
+                            Step 1 of 2 • Pan-India City &amp; Cinema Discovery API
                         </span>
                         <h1 className="text-2xl font-extrabold text-white mt-0.5">
-                            Search Theaters in Your City
+                            Search Theaters in Any City
                         </h1>
                         <p className="text-xs text-slate-400 mt-1">
-                            Pick a movie premiere below or filter by city and mall name to view the
-                            live auditorium seat map.
+                            Enter any city name (Delhi, Mumbai, Bengaluru, Jaipur, Kochi, Indore,
+                            Surat, or your hometown) to fetch live multiplexes &amp; seat availability.
                         </p>
                     </div>
 
@@ -68,17 +128,49 @@ export default function TheaterSearchPage({
                     </div>
                 </div>
 
-                <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 pt-2 border-t border-slate-800/80">
-                    <div className="relative flex-1">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 pt-3 border-t border-slate-800/80">
+                    <form onSubmit={handleCitySubmit} className="md:col-span-6 flex gap-2">
+                        <div className="relative flex-1">
+                            <input
+                                type="text"
+                                value={cityInput}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    setCityInput(val);
+                                    setSelectedCity(val.trim() || 'ALL');
+                                }}
+                                placeholder="📍 Enter any city (e.g. Bengaluru, Jaipur, Pune, Surat, Goa)..."
+                                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-rose-500"
+                            />
+                            {cityInput && (
+                                <button
+                                    type="button"
+                                    onClick={() => handleCityChipClick('ALL')}
+                                    className="absolute right-3 top-3 text-xs text-slate-400 hover:text-white cursor-pointer"
+                                >
+                                    Clear ✕
+                                </button>
+                            )}
+                        </div>
+                        <button
+                            type="submit"
+                            className="px-4 py-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-extrabold shadow-md shadow-rose-600/25 transition cursor-pointer shrink-0"
+                        >
+                            Find City
+                        </button>
+                    </form>
+
+                    <div className="md:col-span-6 relative">
                         <input
                             type="text"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="🔍 Search theater name, mall location, city, or movie (e.g. PVR Ambience Mall, INOX Saket, Mumbai)..."
-                            className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-rose-500"
+                            placeholder="🎬 Filter by theater, mall, screen, or movie (e.g. PVR, INOX, Interstellar)..."
+                            className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
                         />
                         {searchQuery && (
                             <button
+                                type="button"
                                 onClick={() => setSearchQuery('')}
                                 className="absolute right-3 top-3 text-xs text-slate-400 hover:text-white cursor-pointer"
                             >
@@ -86,61 +178,78 @@ export default function TheaterSearchPage({
                             </button>
                         )}
                     </div>
+                </div>
 
-                    <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs font-semibold text-slate-400">📍 City:</span>
-                        {['ALL', 'Gurugram', 'New Delhi', 'Mumbai'].map((city) => (
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    <span className="text-[11px] font-semibold text-slate-400 mr-1">
+                        Quick Cities:
+                    </span>
+                    {POPULAR_CITIES.map((c) => {
+                        const active =
+                            selectedCity.toLowerCase() === c.id.toLowerCase();
+                        return (
                             <button
-                                key={city}
-                                onClick={() => setSelectedCity(city)}
-                                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
-                                    selectedCity === city
+                                key={c.id}
+                                type="button"
+                                onClick={() => handleCityChipClick(c.id)}
+                                className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition cursor-pointer ${
+                                    active
                                         ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30'
-                                        : 'bg-slate-950 text-slate-300 border border-slate-800 hover:border-slate-700'
+                                        : 'bg-slate-950 text-slate-300 border border-slate-800 hover:border-slate-600'
                                 }`}
                             >
-                                {city === 'ALL' ? 'All Cities' : city}
+                                {c.label}
                             </button>
-                        ))}
-                    </div>
+                        );
+                    })}
                 </div>
             </div>
 
             <NowShowingStrip
-                shows={enrichedShows}
+                shows={enrichedBaseShows}
                 onSelectShow={onSelectTheaterShow}
             />
 
             <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-base font-bold text-white">
-                        Available Theaters ({filteredTheaters.length})
-                    </h2>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5">
+                        <h2 className="text-base font-bold text-white">
+                            Available Theaters ({apiTheaters.length})
+                        </h2>
+                        <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                            {searching
+                                ? 'Searching API...'
+                                : selectedCity === 'ALL'
+                                ? 'Live API • All Cities'
+                                : `Live API • City: ${selectedCity}`}
+                        </span>
+                    </div>
                     <span className="text-xs text-slate-400">
                         Click any green showtime pill or theater below to open the seat layout
                     </span>
                 </div>
 
-                {filteredTheaters.length === 0 ? (
+                {apiTheaters.length === 0 && !searching ? (
                     <div className="bg-slate-900 border border-slate-800 rounded-2xl p-10 text-center space-y-3">
                         <p className="text-sm font-semibold text-slate-300">
-                            No theaters found matching &ldquo;{searchQuery}&rdquo; in {selectedCity}.
+                            No theaters matched filter &ldquo;{searchQuery}&rdquo; in{' '}
+                            {selectedCity === 'ALL' ? 'all cities' : selectedCity}.
                         </p>
                         <button
                             onClick={() => {
                                 setSearchQuery('');
-                                setSelectedCity('ALL');
+                                handleCityChipClick('ALL');
                             }}
                             className="px-4 py-2 bg-rose-600 text-white text-xs font-bold rounded-xl cursor-pointer"
                         >
-                            Show All Theaters
+                            Reset Search Filters
                         </button>
                     </div>
                 ) : (
                     <div className="space-y-4">
-                        {filteredTheaters.map((sh) => (
+                        {apiTheaters.map((sh) => (
                             <TheaterVenueCard
-                                key={sh.show_id}
+                                key={sh.listingId || sh.show_id}
                                 show={sh}
                                 onSelectTheaterShow={onSelectTheaterShow}
                                 onOpenSpecsModal={setSpecsModalShow}
@@ -153,7 +262,9 @@ export default function TheaterSearchPage({
             <AuditoriumSpecsModal
                 specsModalShow={specsModalShow}
                 onClose={() => setSpecsModalShow(null)}
-                onSelectTheaterShow={onSelectTheaterShow}
+                onSelectTheaterShow={(id, label) =>
+                    onSelectTheaterShow(id, label, specsModalShow)
+                }
             />
         </div>
     );

@@ -30,7 +30,7 @@ A full-stack **Movie Flash-Sale & Seat Reservation System** (**CinePulse**) buil
   * `sp_generate_show_seats` & `sp_reset_show_demo`: Generates 3-tier auditorium seats (`CLASSIC`, `PRIME`, `RECLINER`) and resets demo inventory.
 
 ### 2. Customer Ticketing Experience
-* **City & Theater Search:** Filter multiplexes by City (*Gurugram*, *New Delhi*, *Mumbai*), Mall/Movie search, Date tabs, and Showtime slots.
+* **All-Cities Theater Search API:** Enter or select any city across India (*Delhi-NCR, Mumbai, Bengaluru, Hyderabad, Pune, Jaipur, Kochi*, or any custom city) and query live multiplexes, real theater photos, and showtime slots via `GET /api/theaters/search`.
 * **Interactive 3-Tier Auditorium:** Smart group presets (*Couple Recliner*, *Family 4-Pack*, *Budget Pair*), *View-From-Seat* acoustic preview, *Watch Held Seat* auto-picker, and *Version Contention Heatmap*.
 * **Perforated Boarding-Pass E-Ticket PDF:** Print or save official CinePulse PDF tickets with movie poster, custom SVG QR code, barcode stub, Gate QR DB Verifier, and 1-click ticket refund.
 

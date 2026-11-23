@@ -1,9 +1,30 @@
 import React, { useState } from 'react';
 
+const CITY_SUGGESTIONS = [
+    'New Delhi',
+    'Gurugram',
+    'Noida',
+    'Mumbai',
+    'Bengaluru',
+    'Hyderabad',
+    'Pune',
+    'Chennai',
+    'Kolkata',
+    'Jaipur',
+    'Chandigarh',
+    'Ahmedabad',
+    'Kochi',
+    'Lucknow',
+    'Indore',
+    'Surat',
+    'Goa',
+    'Patna'
+];
+
 export default function SignupPage({ onSignupSubmit, onGoToLogin }) {
     const [fullName, setFullName] = useState('');
     const [email, setEmail] = useState('');
-    const [city, setCity] = useState('Gurugram (Delhi-NCR)');
+    const [city, setCity] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -36,7 +57,7 @@ export default function SignupPage({ onSignupSubmit, onGoToLogin }) {
                             Create Your Cine<span className="text-rose-400">Pulse</span> Account
                         </h2>
                         <p className="text-xs text-slate-200 mt-0.5">
-                            Sign up to search theaters in your city and reserve movie seats
+                            Sign up to search theaters in any city and reserve movie seats
                         </p>
                     </div>
                 </div>
@@ -81,15 +102,20 @@ export default function SignupPage({ onSignupSubmit, onGoToLogin }) {
                             <label className="block text-xs font-medium text-slate-400 mb-1">
                                 Your City
                             </label>
-                            <select
+                            <input
+                                type="text"
+                                required
+                                list="cinepulse-city-list"
+                                placeholder="Enter any city (e.g. Bengaluru, Jaipur, Delhi, Pune...)"
                                 value={city}
                                 onChange={(e) => setCity(e.target.value)}
                                 className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-rose-500"
-                            >
-                                <option value="Gurugram (Delhi-NCR)">Gurugram (Delhi-NCR)</option>
-                                <option value="New Delhi (Delhi-NCR)">New Delhi (Delhi-NCR)</option>
-                                <option value="Mumbai">Mumbai</option>
-                            </select>
+                            />
+                            <datalist id="cinepulse-city-list">
+                                {CITY_SUGGESTIONS.map((c) => (
+                                    <option key={c} value={c} />
+                                ))}
+                            </datalist>
                         </div>
 
                         <div>

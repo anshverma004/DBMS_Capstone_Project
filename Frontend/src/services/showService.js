@@ -3,6 +3,14 @@ import { request } from './httpClient';
 export const fetchShows = () => request('/shows');
 export const fetchShowDetails = (showId) => request(`/shows/${showId}`);
 
+export const searchTheatersApi = ({ city = '', q = '' } = {}) => {
+    const params = new URLSearchParams();
+    if (city && city !== 'ALL') params.set('city', city);
+    if (q) params.set('q', q);
+    const qs = params.toString();
+    return request(`/theaters/search${qs ? `?${qs}` : ''}`);
+};
+
 export const createMovieShowApi = (payload) =>
     request('/shows/create', {
         method: 'POST',

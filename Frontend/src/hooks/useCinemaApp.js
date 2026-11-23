@@ -17,6 +17,7 @@ export function useCinemaApp() {
     const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
     const [selectedCity, setSelectedCity] = useState('ALL');
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedTheaterVenue, setSelectedTheaterVenue] = useState(null);
 
     const [users, setUsers] = useState([]);
     const [lockMode, setLockMode] = useState('PESSIMISTIC');
@@ -103,9 +104,10 @@ export function useCinemaApp() {
         return () => socket.disconnect();
     }, [selectedShowId]);
 
-    function handleSelectTheaterShow(showId, timeSlotLabel = '') {
+    function handleSelectTheaterShow(showId, timeSlotLabel = '', venueObj = null) {
         setSelectedShowId(Number(showId));
         setSelectedTimeSlot(timeSlotLabel);
+        setSelectedTheaterVenue(venueObj);
         auth.setCurrentPage('booking');
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -160,10 +162,24 @@ export function useCinemaApp() {
         }
     }
 
-    const currentShowObj = enrichShow(
+    const baseShow = enrichShow(
         shows.find((s) => Number(s.show_id) === Number(selectedShowId)),
         0
     );
+    const currentShowObj =
+        baseShow &&
+        selectedTheaterVenue &&
+        Number(selectedTheaterVenue.show_id) === Number(baseShow.show_id)
+            ? {
+                  ...baseShow,
+                  city: selectedTheaterVenue.city || baseShow.city,
+                  theaterName: selectedTheaterVenue.theaterName || baseShow.theaterName,
+                  mallAddress: selectedTheaterVenue.mallAddress || baseShow.mallAddress,
+                  format: selectedTheaterVenue.format || baseShow.format,
+                  venuePhotoUrl: selectedTheaterVenue.venuePhotoUrl || baseShow.venuePhotoUrl
+              }
+            : baseShow;
+
     const myBookingsCount = bookings.filter(
         (b) =>
             Number(b.user_id) === Number(auth.selectedUserId) &&

@@ -107,7 +107,7 @@ export default function LandingPage({
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl group">
                     <div className="relative h-36 overflow-hidden">
                         <img
-                            src="/images/hero-cinema.jpg"
+                            src="/images/theater-auditorium-rows.jpg"
                             alt="IMAX Auditorium Seating"
                             className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
                         />
