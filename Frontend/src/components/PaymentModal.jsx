@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import RealQrCode from './common/RealQrCode';
+import { buildUpiQrPayload } from '../utils/qrHelpers';
 
 const SNACK_COMBOS = [
     { id: 'popcorn', name: '🍿 Caramel Popcorn + 2 Cokes', price: 140 },
@@ -186,14 +188,32 @@ export default function PaymentModal({
                         </div>
 
                         {method === 'UPI' && (
-                            <input
-                                type="text"
-                                required
-                                value={upiId}
-                                onChange={(e) => setUpiId(e.target.value)}
-                                placeholder="Enter UPI ID"
-                                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                            />
+                            <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 flex items-center gap-3.5">
+                                <div className="bg-white p-1.5 rounded-xl shrink-0">
+                                    <RealQrCode
+                                        value={buildUpiQrPayload({
+                                            upiId,
+                                            amount: finalPayable,
+                                            bookingId: booking.booking_id
+                                        })}
+                                        size={92}
+                                        alt="UPI Payment QR"
+                                    />
+                                </div>
+                                <div className="flex-1 space-y-2">
+                                    <span className="text-[11px] font-bold text-emerald-400 block">
+                                        Scan QR with any UPI App (₹{finalPayable})
+                                    </span>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={upiId}
+                                        onChange={(e) => setUpiId(e.target.value)}
+                                        placeholder="Enter UPI ID"
+                                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                                    />
+                                </div>
+                            </div>
                         )}
 
                         {method === 'CARD' && (

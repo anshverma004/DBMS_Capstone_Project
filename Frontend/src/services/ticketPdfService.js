@@ -1,30 +1,22 @@
-function generateTicketQrSvg(seedText = 'CP-1001') {
-    const size = 9;
-    let hash = 2166136261;
-    for (let i = 0; i < seedText.length; i++) {
-        hash ^= seedText.charCodeAt(i);
-        hash = Math.imul(hash, 16777619);
-    }
+import QRCode from 'qrcode';
+import { buildGateQrPayload } from '../utils/qrHelpers';
 
-    let rects = '';
-    const cell = 10;
-    for (let r = 0; r < size; r++) {
-        for (let c = 0; c < size; c++) {
-            const isCorner =
-                (r < 3 && c < 3) ||
-                (r < 3 && c >= size - 3) ||
-                (r >= size - 3 && c < 3);
-            const bit = ((hash >>> ((r * size + c) % 28)) & 1) === 1;
-            if (isCorner || bit) {
-                rects += `<rect x="${10 + c * cell}" y="${10 + r * cell}" width="${cell - 1}" height="${cell - 1}" rx="1.5" fill="#0f172a" />`;
+async function generateRealTicketQrSvg(booking, currentShow) {
+    const payload = buildGateQrPayload(booking, currentShow);
+    try {
+        return await QRCode.toString(payload, {
+            type: 'svg',
+            width: 120,
+            margin: 1,
+            errorCorrectionLevel: 'M',
+            color: {
+                dark: '#0f172a',
+                light: '#ffffff'
             }
-        }
+        });
+    } catch {
+        return '';
     }
-
-    return `<svg viewBox="0 0 110 110" width="115" height="115" xmlns="http://www.w3.org/2000/svg">
-        <rect width="110" height="110" rx="10" fill="#ffffff" stroke="#e2e8f0" stroke-width="2"/>
-        ${rects}
-    </svg>`;
 }
 
 function resolveAbsoluteImageUrl(urlPath = '/images/poster-cosmic-wars.jpg') {
@@ -32,7 +24,7 @@ function resolveAbsoluteImageUrl(urlPath = '/images/poster-cosmic-wars.jpg') {
     return `${window.location.origin}${urlPath}`;
 }
 
-function buildSingleTicketHtml(booking, currentShow, loggedInUser) {
+async function buildSingleTicketHtml(booking, currentShow, loggedInUser) {
     const ticketNo = `CP-${1000 + Number(booking.booking_id)}`;
     const isConfirmed = booking.booking_status === 'CONFIRMED';
     const movieTitle = currentShow?.movie_title || 'Cinema Premiere';
@@ -46,7 +38,7 @@ function buildSingleTicketHtml(booking, currentShow, loggedInUser) {
     const timestamp = booking.confirmed_at
         ? new Date(booking.confirmed_at).toLocaleString()
         : new Date().toLocaleString();
-    const qrSvg = generateTicketQrSvg(`${ticketNo}-${booking.seats_list}`);
+    const qrSvg = await generateRealTicketQrSvg(booking, currentShow);
 
     return `
         <div class="ticket-wrapper">
@@ -124,7 +116,7 @@ function buildSingleTicketHtml(booking, currentShow, loggedInUser) {
     `;
 }
 
-export function openPrintableTicketPdf(bookingsList, currentShow, loggedInUser) {
+export async function openPrintableTicketPdf(bookingsList, currentShow, loggedInUser) {
     const items = Array.isArray(bookingsList) ? bookingsList : [bookingsList];
     if (items.length === 0) return;
 
@@ -134,9 +126,11 @@ export function openPrintableTicketPdf(bookingsList, currentShow, loggedInUser) 
         return;
     }
 
-    const cardsHtml = items
-        .map((b) => buildSingleTicketHtml(b, currentShow, loggedInUser))
-        .join('');
+    const cardsHtml = (
+        await Promise.all(
+            items.map((b) => buildSingleTicketHtml(b, currentShow, loggedInUser))
+        )
+    ).join('');
 
     const docHtml = `<!DOCTYPE html>
 <html>
@@ -366,7 +360,19 @@ export function openPrintableTicketPdf(bookingsList, currentShow, loggedInUser) 
             color: #475569;
             margin-bottom: 8px;
         }
-        .qr-box { margin-bottom: 8px; }
+        .qr-box {
+            margin-bottom: 8px;
+            padding: 4px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            display: inline-block;
+        }
+        .qr-box svg {
+            display: block;
+            width: 118px;
+            height: 118px;
+        }
         .stub-code {
             font-family: monospace;
             font-size: 13px;
@@ -427,7 +433,7 @@ export function openPrintableTicketPdf(bookingsList, currentShow, loggedInUser) 
     ${cardsHtml}
 
     <div class="footer-note">
-        Please present this QR code at the cinema auditorium entrance • Carry a valid photo ID • Zero double-booking guaranteed by InnoDB Row-Level Locking.
+        Scan this official QR code at the cinema auditorium entrance • Carry a valid photo ID • Zero double-booking guaranteed by InnoDB Row-Level Locking.
     </div>
 
     <script>

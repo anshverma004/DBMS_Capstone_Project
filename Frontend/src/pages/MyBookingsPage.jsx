@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { openPrintableTicketPdf } from '../services/api';
+import { buildGateQrPayload } from '../utils/qrHelpers';
+import RealQrCode from '../components/common/RealQrCode';
 import GateQrVerifyModal from '../components/bookings/GateQrVerifyModal';
 
 export default function MyBookingsPage({
@@ -31,8 +33,8 @@ export default function MyBookingsPage({
                         <strong className="text-emerald-400">
                             {loggedInUser?.full_name || 'Guest'}
                         </strong>{' '}
-                        ({loggedInUser?.email || 'Active Session'}) • Click any QR Code to open the
-                        Cinema Gate DB Verifier
+                        ({loggedInUser?.email || 'Active Session'}) • Scan or click any QR Code to
+                        open the Cinema Gate DB Verifier
                     </p>
                 </div>
 
@@ -78,6 +80,9 @@ export default function MyBookingsPage({
                     {myBookings.map((b) => {
                         const isConfirmed = b.booking_status === 'CONFIRMED';
                         const isPending = b.booking_status === 'PENDING';
+                        const qrPayload = isConfirmed
+                            ? buildGateQrPayload(b, currentShow)
+                            : '';
 
                         return (
                             <div
@@ -171,18 +176,16 @@ export default function MyBookingsPage({
                                         <button
                                             type="button"
                                             onClick={() => setInspectedTicket(b)}
-                                            title="Click to verify M-Ticket in MySQL InnoDB"
-                                            className="bg-white hover:bg-emerald-100 text-slate-950 p-3 rounded-xl text-center font-mono text-xs font-black leading-none select-none shadow-md transition cursor-pointer shrink-0"
+                                            title="Click to inspect & verify real Gate QR in MySQL InnoDB"
+                                            className="bg-white hover:bg-emerald-50 p-2 rounded-xl text-center select-none shadow-md transition cursor-pointer shrink-0 border-2 border-emerald-400/50"
                                         >
-                                            ▄▄▄▄▄▄▄
-                                            <br />
-                                            █ ▄▄▄ █
-                                            <br />
-                                            █ ███ █
-                                            <br />
-                                            ▀▀▀▀▀▀▀
+                                            <RealQrCode
+                                                value={qrPayload}
+                                                size={74}
+                                                alt={`Ticket #CP-${1000 + Number(b.booking_id)} QR`}
+                                            />
                                             <div className="text-[8px] font-extrabold mt-1 tracking-wider text-emerald-800">
-                                                VERIFY QR
+                                                GATE QR
                                             </div>
                                         </button>
                                     )}
@@ -243,6 +246,7 @@ export default function MyBookingsPage({
 
             <GateQrVerifyModal
                 inspectedTicket={inspectedTicket}
+                currentShow={currentShow}
                 onClose={() => setInspectedTicket(null)}
             />
         </div>
