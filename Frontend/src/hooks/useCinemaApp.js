@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
 import {
-    SOCKET_URL,
+    getActiveSocketUrl,
     fetchUsers,
     fetchShows,
     fetchShowDetails,
@@ -33,6 +33,10 @@ export function useCinemaApp() {
     const [sampleResults, setSampleResults] = useState([]);
     const [message, setMessage] = useState('');
     const [paymentModalBooking, setPaymentModalBooking] = useState(null);
+    const [backendReady, setBackendReady] = useState(false);
+
+    const selectedShowIdRef = useRef(selectedShowId);
+    selectedShowIdRef.current = selectedShowId;
 
     const auth = useAuthSession({
         setUsers,
@@ -42,9 +46,15 @@ export function useCinemaApp() {
 
     async function loadInitialData() {
         try {
-            const [usersData, showsData] = await Promise.all([fetchUsers(), fetchShows()]);
-            setUsers(usersData);
+            const [showsData, usersData] = await Promise.all([
+                fetchShows(),
+                fetchUsers().catch(() => [])
+            ]);
             setShows(showsData);
+            if (Array.isArray(usersData) && usersData.length > 0) {
+                setUsers(usersData);
+            }
+            setBackendReady(true);
         } catch (err) {
             setMessage(`Error: ${err.message}`);
         }
@@ -56,8 +66,6 @@ export function useCinemaApp() {
             setSeats(data.seats || []);
             setBookings(data.bookings || []);
             setAuditLogs(data.auditLogs || []);
-            const showsData = await fetchShows();
-            setShows(showsData);
         } catch (err) {
             setMessage(`Error: ${err.message}`);
         }
@@ -76,25 +84,35 @@ export function useCinemaApp() {
     });
 
     useEffect(() => {
+        if (!auth.loggedInUser) {
+            setBackendReady(false);
+            return;
+        }
         loadInitialData();
-    }, []);
+    }, [auth.loggedInUser]);
 
     useEffect(() => {
+        if (!auth.loggedInUser) return;
         setSelectedSeatIds([]);
         setSimulationResult(null);
         setSampleResults([]);
         loadShowData(selectedShowId);
-    }, [selectedShowId]);
+    }, [auth.loggedInUser, selectedShowId]);
 
     useEffect(() => {
-        const socket = io(SOCKET_URL);
+        if (!auth.loggedInUser || !backendReady) return;
+        const socket = io(getActiveSocketUrl(), {
+            transports: ['websocket', 'polling'],
+            reconnectionAttempts: 2,
+            reconnectionDelay: 5000,
+            timeout: 10000
+        });
         socket.on('show_updated', (data) => {
-            if (data.show && data.show.show_id === selectedShowId) {
+            if (data.show && data.show.show_id === selectedShowIdRef.current) {
                 setSeats(data.seats || []);
                 setBookings(data.bookings || []);
                 setAuditLogs(data.auditLogs || []);
             }
-            fetchShows().then(setShows).catch(() => {});
         });
         socket.on('users_updated', (updatedUsers) => {
             if (Array.isArray(updatedUsers)) {
@@ -102,7 +120,7 @@ export function useCinemaApp() {
             }
         });
         return () => socket.disconnect();
-    }, [selectedShowId]);
+    }, [auth.loggedInUser, backendReady]);
 
     function handleSelectTheaterShow(showId, timeSlotLabel = '', venueObj = null) {
         setSelectedShowId(Number(showId));
