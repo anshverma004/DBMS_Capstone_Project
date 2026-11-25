@@ -80,7 +80,7 @@ export default function TheaterSearchPage({
             cancelled = true;
             clearTimeout(timer);
         };
-    }, [selectedCity, searchQuery, shows]);
+    }, [selectedCity, searchQuery, shows.length]);
 
     function handleCitySubmit(e) {
         e.preventDefault();

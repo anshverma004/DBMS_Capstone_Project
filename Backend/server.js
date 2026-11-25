@@ -12,15 +12,29 @@ dotenv.config();
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-    cors: { origin: '*', methods: ['GET', 'POST'] }
+    cors: { origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'] }
 });
 
-app.use(cors());
+app.use(
+    cors({
+        origin: '*',
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization']
+    })
+);
 app.use(express.json());
 
 app.use((req, res, next) => {
     req.io = io;
     next();
+});
+
+app.get('/', (req, res) => {
+    res.json({ status: 'ok', service: 'CinePulse Flash-Sale API' });
+});
+
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', uptime: Math.round(process.uptime()) });
 });
 
 app.use('/api', apiRoutes);

@@ -1,5 +1,5 @@
 export { SHOW_ENRICHMENT, enrichShow } from '../constants/theaterData';
-export { SOCKET_URL, API_BASE } from './httpClient';
+export { SOCKET_URL, API_BASE, getActiveSocketUrl } from './httpClient';
 export { fetchUsers, signupUserApi, loginUserApi } from './authService';
 export {
     fetchShows,
