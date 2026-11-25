@@ -66,6 +66,13 @@ export function useCinemaApp() {
             setSeats(data.seats || []);
             setBookings(data.bookings || []);
             setAuditLogs(data.auditLogs || []);
+            if (data.show) {
+                setShows((prev) =>
+                    prev.map((s) =>
+                        Number(s.show_id) === Number(data.show.show_id) ? data.show : s
+                    )
+                );
+            }
         } catch (err) {
             setMessage(`Error: ${err.message}`);
         }
@@ -101,7 +108,9 @@ export function useCinemaApp() {
 
     useEffect(() => {
         if (!auth.loggedInUser || !backendReady) return;
-        const socket = io(getActiveSocketUrl(), {
+        const socketUrl = getActiveSocketUrl();
+        if (!socketUrl) return;
+        const socket = io(socketUrl, {
             transports: ['websocket', 'polling'],
             reconnectionAttempts: 2,
             reconnectionDelay: 5000,

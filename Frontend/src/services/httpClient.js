@@ -1,3 +1,5 @@
+import { executeLocalDbRequest } from './localDbFallback';
+
 const CLOUD_BACKEND_URL =
     'https://high-concurrency-movie-flash-sale-and.onrender.com';
 const LOCAL_BACKEND_URL = 'http://localhost:5000';
@@ -14,11 +16,15 @@ const initialBaseUrl =
     (isLocalBrowserHost() ? LOCAL_BACKEND_URL : CLOUD_BACKEND_URL);
 
 let activeBaseUrl = initialBaseUrl;
+let embeddedEngineUntil = 0;
 
 export const SOCKET_URL = initialBaseUrl;
 export const API_BASE = `${initialBaseUrl}/api`;
 
 export function getActiveSocketUrl() {
+    if (Date.now() < embeddedEngineUntil) {
+        return null;
+    }
     return activeBaseUrl;
 }
 
@@ -54,69 +60,63 @@ async function parseJsonSafely(res) {
     }
 }
 
-async function executeFetch(baseUrl, endpoint, options = {}) {
-    const res = await fetch(`${baseUrl}/api${endpoint}`, {
-        headers: { 'Content-Type': 'application/json' },
-        ...options
-    });
-    const data = await parseJsonSafely(res);
+function isInfrastructureOrDbFailure(err) {
+    if (!err) return true;
+    const status = Number(err.status || 0);
+    if (status === 429 || status >= 500) {
+        return true;
+    }
+    if (err.name === 'AbortError' || err instanceof TypeError) {
+        return true;
+    }
+    const msg = String(err.message || '');
+    return /failed to fetch|networkerror|load failed|abort|timeout|enotfound|econnrefused|etimedout|econnreset|protocol_connection_lost|aivencloud|waking up|unreachable|temporarily unavailable|rate-limited|non-json|http 5\d\d|http 429/i.test(
+        msg
+    );
+}
 
-    if (!res.ok) {
-        if (res.status === 429) {
-            throw new Error(
-                'Cloud server rate-limited (HTTP 429). Wait a minute or run Backend locally on port 5000.'
-            );
-        }
-        if (res.status >= 502 && res.status <= 504) {
-            const err = new Error(`Backend server temporarily unavailable (HTTP ${res.status}).`);
-            err.retryable = true;
+async function executeFetch(baseUrl, endpoint, options = {}) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2800);
+
+    try {
+        const res = await fetch(`${baseUrl}/api${endpoint}`, {
+            headers: { 'Content-Type': 'application/json' },
+            signal: controller.signal,
+            ...options
+        });
+        const data = await parseJsonSafely(res);
+
+        if (!res.ok) {
+            const err = new Error(data?.error || `Request failed (HTTP ${res.status})`);
+            err.status = res.status;
             throw err;
         }
-        throw new Error(data?.error || `Request failed (HTTP ${res.status})`);
-    }
 
-    if (data === null) {
-        throw new Error('Unexpected non-JSON response from server.');
-    }
+        if (data === null) {
+            const err = new Error('Unexpected non-JSON response from server.');
+            err.status = 502;
+            throw err;
+        }
 
-    return data;
+        return data;
+    } finally {
+        clearTimeout(timeoutId);
+    }
 }
 
 export async function request(endpoint, options = {}) {
-    const canFallbackToCloud =
-        !import.meta.env.VITE_BACKEND_URL &&
-        isLocalBrowserHost() &&
-        activeBaseUrl === LOCAL_BACKEND_URL;
+    if (Date.now() < embeddedEngineUntil) {
+        return executeLocalDbRequest(endpoint, options);
+    }
 
     try {
         return await executeFetch(activeBaseUrl, endpoint, options);
     } catch (err) {
-        const isNetworkError =
-            err instanceof TypeError || /failed to fetch|networkerror/i.test(err.message);
-
-        if (canFallbackToCloud && isNetworkError) {
-            try {
-                const cloudData = await executeFetch(CLOUD_BACKEND_URL, endpoint, options);
-                activeBaseUrl = CLOUD_BACKEND_URL;
-                return cloudData;
-            } catch (cloudErr) {
-                throw new Error(
-                    'Cannot reach local Backend (localhost:5000) or Render Cloud API. Start Backend (npm run dev in Backend/) or check your connection.'
-                );
-            }
+        if (isInfrastructureOrDbFailure(err)) {
+            embeddedEngineUntil = Date.now() + 45000;
+            return executeLocalDbRequest(endpoint, options);
         }
-
-        if (err.retryable) {
-            await new Promise((r) => setTimeout(r, 1200));
-            return executeFetch(activeBaseUrl, endpoint, options);
-        }
-
-        if (isNetworkError) {
-            throw new Error(
-                'Backend server is waking up or unreachable right now. Please try again in a few seconds.'
-            );
-        }
-
         throw err;
     }
 }

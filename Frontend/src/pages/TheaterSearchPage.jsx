@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { DATE_TABS, enrichShow } from '../constants/theaterData';
 import { searchTheatersApi } from '../services/api';
+import { searchDirectoryWithShows } from '../services/localDbFallback';
 import NowShowingStrip from '../components/theater/NowShowingStrip';
 import TheaterVenueCard from '../components/theater/TheaterVenueCard';
 import AuditoriumSpecsModal from '../components/theater/AuditoriumSpecsModal';
@@ -35,11 +36,17 @@ export default function TheaterSearchPage({
     const [cityInput, setCityInput] = useState(
         selectedCity && selectedCity !== 'ALL' ? selectedCity : ''
     );
-    const [apiTheaters, setApiTheaters] = useState([]);
+    const [apiTheaters, setApiTheaters] = useState(() =>
+        searchDirectoryWithShows(shows, selectedCity, searchQuery).map((sh, idx) =>
+            enrichShow(sh, idx)
+        )
+    );
     const [searching, setSearching] = useState(false);
     const [specsModalShow, setSpecsModalShow] = useState(null);
 
-    const enrichedBaseShows = shows.map((sh, idx) => enrichShow(sh, idx));
+    const enrichedBaseShows = (
+        shows.length > 0 ? shows : searchDirectoryWithShows([], 'ALL', '').slice(0, 3)
+    ).map((sh, idx) => enrichShow(sh, idx));
 
     useEffect(() => {
         let cancelled = false;
@@ -55,32 +62,23 @@ export default function TheaterSearchPage({
                 }
             } catch {
                 if (!cancelled) {
-                    const cNorm = String(selectedCity || '').toLowerCase();
-                    const qNorm = String(searchQuery || '').toLowerCase();
-                    const fallback = enrichedBaseShows.filter((sh) => {
-                        const matchCity =
-                            !cNorm ||
-                            cNorm === 'all' ||
-                            sh.city?.toLowerCase().includes(cNorm);
-                        const matchQ =
-                            !qNorm ||
-                            sh.theaterName?.toLowerCase().includes(qNorm) ||
-                            sh.movie_title?.toLowerCase().includes(qNorm) ||
-                            sh.city?.toLowerCase().includes(qNorm);
-                        return matchCity && matchQ;
-                    });
+                    const fallback = searchDirectoryWithShows(
+                        shows,
+                        selectedCity,
+                        searchQuery
+                    ).map((sh, idx) => enrichShow(sh, idx));
                     setApiTheaters(fallback);
                 }
             } finally {
                 if (!cancelled) setSearching(false);
             }
-        }, 250);
+        }, 120);
 
         return () => {
             cancelled = true;
             clearTimeout(timer);
         };
-    }, [selectedCity, searchQuery, shows.length]);
+    }, [selectedCity, searchQuery, shows]);
 
     function handleCitySubmit(e) {
         e.preventDefault();
